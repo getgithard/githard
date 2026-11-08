@@ -13,3 +13,23 @@ jobs:
         with:
           persist-credentials: false
       - run: scripts/check.sh
+  dco:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is signed off
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        # shortcut: checks a Signed-off-by line exists, not that it matches the author. Use a DCO app if that matters.
+        run: |
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$c" | grep -q '^Signed-off-by: ' ||
+              { echo "::error::$(git log -1 --format='%h %s' "$c") has no Signed-off-by line"; missing=1; }
+          done
+          exit $missing

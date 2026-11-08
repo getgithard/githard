@@ -35,3 +35,13 @@ Gotchas:
 Waiting on James (repo settings, so they need his yes): `bash skills/repo-setup/audit.sh jamesconwaydev/githard` reports this repo has no CODEOWNERS, no DCO check in CI, Dependabot alerts off and web-commit sign-off off. The plugin icon is still open too.
 
 Next: M2, starting with #5 (`contributors`).
+
+## 2026-11-08 ~21:00 UTC: audit gaps closed
+
+James's standing rule: fix every gap and bug found along the way, don't just report it. GitHard is for new orgs and repos, not for retrofitting old ones, and the docs and the repo-setup wording now say so.
+
+Done: Dependabot alerts and web-commit sign-off are on (both API calls). This PR adds CODEOWNERS and a `dco` CI job. Once it merges, `dco` gets added to the `protect-main` ruleset as a required check.
+
+Note: `CLAUDE.md` is in James's global git ignore, so it isn't in the repo. Changes to it only apply on his machine.
+
+Next: #5 (`contributors`). The icon is still waiting on James.

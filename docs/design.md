@@ -1,16 +1,16 @@
 # GitHard: design
 
-Status: foundation, 8 Nov 2026. Nothing below is built yet. `docs/plan.md` says in what order it gets built.
+Status, 8 Nov 2026: M1 is built (`using-githard`, `writing`, `repo-setup`, and the eval harness). The rest is planned, and `docs/plan.md` gives the order it gets built in.
 
 ## What it is
 
-GitHard is a Claude Code plugin. It helps someone build and run a GitHub org and its repos the way well-run projects do: how the repos are set up, the issues, contributors, reviews, merges, releases, docs, security and growth. It's built from what actually worked, and what went wrong, running a real open-source project from its first commit (`knowledge/lessons.md`).
+GitHard is a Claude Code plugin. It helps someone start a new GitHub org and its repos, then run them the way well-run projects do: how the repos are set up, the issues, contributors, reviews, merges, releases, docs, security and growth. It's built from what actually worked, and what went wrong, running a real open-source project from its first commit (`knowledge/lessons.md`).
 
 ## Who it's for first
 
 **Solo builders and small teams starting from zero:** one person, or a few, with an idea and a GitHub account and no maintainer experience. They want to look and work like a mature project from day one, without learning every GitHub setting the hard way.
 
-Open-source maintainers of existing projects and company orgs come later. Nothing should block them, but the examples, defaults and first skills are for the person starting out.
+GitHard is for new projects, the ones being started now. It isn't a tool for retrofitting old or legacy repos. Every example, default and skill is written for the person starting out.
 
 ## What it does for them
 
@@ -50,7 +50,7 @@ Names are working names. Each skill's description has to say when to use it, in 
 |---|---|
 | `using-githard` | The entry point: what GitHard can do, and which skill fits the request. Loads the principles. |
 | `org-setup` | A new org: profile README, the public `.github` repo with default community files, verified domain, pinned repos, member and security defaults. |
-| `repo-setup` | A new or existing repo: community files, license choice, ruleset, DCO, Dependabot, pinned Actions, CI skeleton, private vulnerability reporting, labels, templates, Discussions. Audits an existing repo against the same list. |
+| `repo-setup` | A new repo: community files, license choice, ruleset, DCO, Dependabot, pinned Actions, CI skeleton, private vulnerability reporting, labels, templates, Discussions. Its audit checks a young repo against the same list before it goes public. |
 | `issues-and-roadmap` | Milestones, a project board, starter issues with "done when" criteria, issue metadata, keeping a pool of scoped work, "writers wanted" issues. |
 | `contributors` | Welcoming claims, the reaction rules, the quiet-PR policy, thanks in release notes, answering every outside PR, the unanswered-PR check, AI policy for contributors. |
 | `fork-pr-safety` | Reviewing a fork PR before its CI runs, approving runs on the head commit only, what never to do to a contributor's branch, DCO pitfalls. |
