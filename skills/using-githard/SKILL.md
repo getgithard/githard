@@ -11,11 +11,11 @@ GitHard helps you set up and run a GitHub org and its repos the way well-run pro
 
 Match the request to a row. If a row says **built**, load that skill and follow it.
 
-If it says **planned**, your reply opens with this sentence, word for word apart from the skill's name:
+If it says **planned**, your final answer opens with this sentence, word for word apart from the skill's name. Put it there even if you already said it while working:
 
 > GitHard's `<skill>` skill isn't built yet, so this is general advice rather than GitHard's own checklist.
 
-That sentence comes first even when something else is wrong, such as a missing repo or an empty folder. Then help as well as you can. Never invent the skill's steps, scripts or commands.
+It comes first even when something else is wrong, such as a missing repo or an empty folder. Then help as well as you can. Never invent the skill's steps, scripts or commands.
 
 | The request sounds like | Skill | Status |
 |---|---|---|
