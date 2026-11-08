@@ -3,10 +3,15 @@
 # Usage: bash audit.sh [owner/repo]   (run from the repo's root)
 # File checks always run. GitHub settings are checked only when an owner/repo
 # is given and `gh` can reach it; anything it can't confirm is "unknown", never "ok".
-# Prints one line per item: ok | missing | unknown. Exits 1 if anything is missing.
+# Prints one line per item: ok | missing | skipped | unknown. Exits 1 if anything is missing.
 set -uo pipefail
 missing=0
-report() { printf '%-8s %s\n' "$1" "$2"; [ "$1" = missing ] && missing=1; return 0; }
+# Items listed one per line in .github/audit-skip are off on purpose: reported as "skipped", never "missing".
+report() {
+  local state=$1
+  [ "$state" = missing ] && [ -f .github/audit-skip ] && grep -qxF "$2" .github/audit-skip && state=skipped
+  printf '%-8s %s\n' "$state" "$2"; [ "$state" = missing ] && missing=1; return 0
+}
 has() { for f in "$@"; do [ -e "$f" ] && return 0; done; return 1; }
 check_file() { local label=$1; shift; if has "$@"; then report ok "$label"; else report missing "$label"; fi; }
 

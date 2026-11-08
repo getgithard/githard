@@ -41,7 +41,7 @@ Run the audit script from the repo's root:
 bash <this skill's folder>/audit.sh OWNER/REPO
 ```
 
-It prints `ok`, `missing` or `unknown` for each item. Settings it can't reach (no `gh`, no network, no access) come back `unknown`. Report them as unchecked, never as fine, and give the command that would check each one. If you can't run the script, check the same items by reading the files, and say which settings you couldn't see.
+It prints `ok`, `missing`, `skipped` or `unknown` for each item. If the owner has decided to leave an item off, such as Discussions on a repo whose questions go elsewhere, put its name exactly as the audit prints it on its own line in `.github/audit-skip`. From then on it reports as `skipped`. Settings it can't reach (no `gh`, no network, no access) come back `unknown`. Report them as unchecked, never as fine, and give the command that would check each one. If you can't run the script, check the same items by reading the files, and say which settings you couldn't see.
 
 Then list what's missing in the order the table gives it, with the fix for each. Offer to make the fixes. The "owner" rows still need a yes.
 

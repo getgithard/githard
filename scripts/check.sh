@@ -55,4 +55,9 @@ for item in CONTRIBUTING SECURITY CODE_OF_CONDUCT CODEOWNERS "PR template" "issu
   "Actions pinned to full commit SHAs" "DCO sign-off check in CI"; do
   grep -q "^missing  $item" <<<"$audit" || { echo "audit.sh didn't flag: $item"; fail=1; }
 done
+# An item listed in .github/audit-skip reports as skipped, not missing.
+s=$(mktemp -d); mkdir "$s/.github"; echo SECURITY > "$s/.github/audit-skip"
+audit=$(cd "$s" && bash "$OLDPWD/skills/repo-setup/audit.sh") || true
+rm -rf "$s"
+grep -q '^skipped  SECURITY$' <<<"$audit" || { echo "audit.sh ignored .github/audit-skip"; fail=1; }
 exit $fail
