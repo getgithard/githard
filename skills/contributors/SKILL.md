@@ -7,7 +7,7 @@ description: Use when someone claims an issue, opens a pull request, or goes qui
 
 People come back to a project that answers them. In the project these lessons come from, one first-time contributor waited two days for a reply because the watcher only reported new activity. This skill keeps every contributor answered, thanked and clear on what happens next.
 
-The reasons behind each rule are in `knowledge/lessons.md` (Contributors, AI in the project), at the plugin root two folders up from this file. For the wording of any reply, use the `writing` skill.
+The reasons behind each rule are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md` (Contributors, AI in the project). For the wording of any reply, use the `writing` skill.
 
 ## When something happens
 
@@ -31,7 +31,7 @@ One reaction per item, and only on other people's posts. 🚀 for a claim or a n
 At the start of every session, before anything else, run:
 
 ```sh
-bash <this skill's folder>/unanswered.sh OWNER/REPO
+bash ${CLAUDE_SKILL_DIR}/unanswered.sh OWNER/REPO
 ```
 
 It lists outside PRs with no maintainer reply (`unanswered`), PRs quiet for 30 days (`check-in`) and PRs quiet for 60 days (`decide`). Exit 2 means it couldn't get an answer from GitHub. Report that as unknown, not as "nothing owed". If you can't run it at all, give the owner the exact command above and ask them to run it every session. A watcher that only shows new activity misses older PRs, and this check is what catches them.
@@ -42,7 +42,7 @@ Don't add one, and if the repo has one (`actions/stale` in a workflow, or a `sta
 
 ## An AI policy
 
-If the repo has no `AI_POLICY.md`, offer `templates/AI_POLICY.md`. Whether the project bans AI help is the owner's call, so ask. The template welcomes it with disclosure, and says the contributor is responsible for every line.
+If the repo has no `AI_POLICY.md`, offer `${CLAUDE_SKILL_DIR}/templates/AI_POLICY.md`. Whether the project bans AI help is the owner's call, so ask. The template welcomes it with disclosure, and says the contributor is responsible for every line.
 
 ## "Writers wanted"
 

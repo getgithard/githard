@@ -15,7 +15,7 @@ Look before you write. A project's own guide always wins over GitHard's.
 - A style or writing section in `CONTRIBUTING.md`
 - A prose linter's config: `.vale.ini`, `.markdownlint*`, `.textlintrc*`
 
-If you find one, follow it, even where it disagrees with GitHard's voice. Then say in one line which guide you used, for example: "Written to `docs/style-guide.md`." If you find none, use GitHard's voice in `knowledge/voice.md` at the plugin root, two folders up from this file. Read it before you write. Don't work from memory of it.
+If you find one, follow it, even where it disagrees with GitHard's voice. Then say in one line which guide you used, for example: "Written to `docs/style-guide.md`." If you find none, use GitHard's voice in `${CLAUDE_PLUGIN_ROOT}/knowledge/voice.md`. Read it before you write. Don't work from memory of it.
 
 ## By kind of text
 
@@ -36,4 +36,4 @@ The reasons behind the release-notes and reply rules are in `knowledge/lessons.m
 - None of the banned words in `voice.md` appear, and nothing is built as "It's not just X, it's Y".
 - Read it aloud in your head. Any sentence you wouldn't say to someone across a table gets rewritten.
 
-`examples.md`, next to this file, has before and after pairs for each kind of text.
+`${CLAUDE_SKILL_DIR}/examples.md` has before and after pairs for each kind of text.

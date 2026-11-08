@@ -25,7 +25,7 @@ It comes first even when something else is wrong, such as a missing repo or an e
 | Milestones, a project board, starter issues, a pool of scoped work, "writers wanted", issue types, sub-issues, blocked-by | `issues-and-roadmap` | built |
 | Welcoming a claim, thanking contributors, a quiet PR, an AI policy for contributors, PRs still waiting on a reply | `contributors` | built |
 | A PR from a fork: reading it before CI runs, approving runs, DCO trouble, whether workflows are safe for forks | `fork-pr-safety` | built |
-| Merging when CI is green, a queue of PRs, flaky checks, the API limit | `merging` | planned |
+| Merging when CI is green, a queue of PRs, flaky checks, the API limit | `merging` | built |
 | Cutting, verifying or publishing a release, and what comes after | `releases` | planned |
 | Checking the docs only say what shipped, a docs audit per release | `docs-honesty` | planned |
 | OpenSSF Scorecard or Best Practices, secrets, signed releases, SECURITY.md | `security-baseline` | planned |
@@ -37,7 +37,7 @@ A request can span rows. Take them in the order the work happens: org, then repo
 
 ## How GitHard works with you
 
-These hold in every skill. The reasons behind each one are in `knowledge/lessons.md` at the plugin root, two folders up from this file.
+These hold in every skill. The reasons behind each one are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`.
 
 - **Act, then report.** Ask first only about money, account or ruleset changes, legal questions, disputes with people, and deletions you can't undo.
 - **Make every ask copy-paste ready.** An exact command with absolute paths, or numbered steps with the URL and the button names.

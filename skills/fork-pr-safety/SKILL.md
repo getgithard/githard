@@ -7,18 +7,18 @@ description: Use when a pull request comes from a fork, when its workflow runs s
 
 Approving CI on a PR from a fork runs a stranger's code on your runners. Most of the time that's fine. What protects you is reading the diff first, every time, and approving only the commit you read.
 
-The reasons behind each step are in `knowledge/lessons.md` (Fork PRs and CI safety), at the plugin root two folders up from this file.
+The reasons behind each step are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md` (Fork PRs and CI safety).
 
 ## Before CI runs
 
-1. **Get the full diff reviewed.** Dispatch the `fork-pr-reviewer` agent with the repo and the PR number, or with the diff file if that's what you have. It reads every line and returns a verdict. If you can't dispatch it, read `gh pr diff <N>` yourself, all of it, against the same list in `agents/fork-pr-reviewer.md` at the plugin root.
+1. **Get the full diff reviewed.** Dispatch the `fork-pr-reviewer` agent with the repo and the PR number, or with the diff file if that's what you have. It reads every line and returns a verdict. If you can't dispatch it, read `gh pr diff <N>` yourself, all of it, against the same list in `${CLAUDE_PLUGIN_ROOT}/agents/fork-pr-reviewer.md`.
 2. **Act on the verdict.**
    - `SAFE TO RUN CI`: approve the runs (step 3).
    - `OWNER MUST REVIEW`: anything under `.github/`, anything near secrets, or code that runs in CI goes to the owner. Give them the PR link and the findings, and don't approve until they say yes.
    - `DON'T RUN CI`: don't approve. Tell the owner what was found.
 3. **Approve only the runs on the PR's current head commit:**
    ```sh
-   bash <this skill's folder>/approve-runs.sh OWNER/REPO <N>
+   bash ${CLAUDE_SKILL_DIR}/approve-runs.sh OWNER/REPO <N>
    ```
    If someone pushes after your review, the runs on the new commit still wait for a look.
 

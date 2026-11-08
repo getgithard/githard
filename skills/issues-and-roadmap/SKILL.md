@@ -7,7 +7,7 @@ description: Use when planning work on a GitHub repo, such as milestones, a road
 
 An issue a stranger can finish is the cheapest contributor you'll ever get. One that just says "improve search" sits there until you do it yourself. This skill keeps the roadmap visible and every issue ready to pick up.
 
-The reasons behind each rule are in `knowledge/lessons.md` (Issues and the roadmap), at the plugin root two folders up from this file.
+The reasons behind each rule are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md` (Issues and the roadmap).
 
 ## The roadmap
 
@@ -22,7 +22,7 @@ Each one gets a type (`gh issue edit <N> --type Bug|Feature|Task`), a milestone,
 
 ## Issues for newcomers
 
-Start from `templates/starter-issue.md`. A starter issue names the files to change, says how to test, gives "Done when", and says which files to stay out of. Label it `good first issue` or `help wanted`.
+Start from `${CLAUDE_SKILL_DIR}/templates/starter-issue.md`. A starter issue names the files to change, says how to test, gives "Done when", and says which files to stay out of. Label it `good first issue` or `help wanted`.
 
 For docs, use a `writers wanted` label. Writers are rarer on GitHub than developers. Say plainly that the work is volunteer, and never hint at pay.
 
@@ -33,7 +33,7 @@ Aim for about ten scoped, unassigned issues at any time, so nobody who turns up 
 ## Checking a repo
 
 ```sh
-bash <this skill's folder>/issue-health.sh OWNER/REPO [POOL_TARGET]
+bash ${CLAUDE_SKILL_DIR}/issue-health.sh OWNER/REPO [POOL_TARGET]
 ```
 
 It lists each open issue that's missing a type, a milestone or "Done when", then counts the pool. Exit 1 means there's work to do. Exit 2 means GitHub didn't answer: report that as unknown, not as healthy. For an existing project, run it first, fix the oldest issues first, then build the pool up to target.
