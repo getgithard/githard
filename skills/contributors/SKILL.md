@@ -14,7 +14,7 @@ The reasons behind each rule are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
 | Event | What you do |
 |---|---|
 | Someone claims an issue | React 🚀, assign them, and reply with a welcome. On their first time, tell them that CI on a fork PR waits until a maintainer has read the diff and approved it, and that if `main` moves on they should click **Update branch**, because you won't push to their branch. |
-| An outside PR opens | React 🚀 and reply the same day: thanks for the specific change, and when you'll review it. |
+| An outside PR opens | React 🚀 and reply the same day: thanks for the specific change, and when you'll review it. On their first PR, add the same note about fork CI approval and **Update branch**. |
 | You're reviewing it | React 👀. |
 | It merges | React 🎉, thank them by `@handle` in the running release notes, and comment on the PR when the release ships. |
 | They went beyond the ask | ❤️, plus a sentence saying what you noticed. |

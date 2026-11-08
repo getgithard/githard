@@ -1,5 +1,5 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?writing"'
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(?:writing|contributors)"'
 ---

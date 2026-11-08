@@ -14,7 +14,7 @@ Use the sonnet judge. With the default haiku judge, the same reply sometimes pas
 
 ## When a skill ships
 
-The `using-githard` cases named `planned-*` check what GitHard says about a skill that isn't built yet. When that skill ships, point the case at one that's still planned, or it can never pass again.
+The `using-githard` cases named `planned-*` check what GitHard says about a skill that isn't built yet. When that skill ships, point the case at one that's still planned, or it can never pass again. Also take that skill's topics out of the list of planned skills in `using-githard`'s description, so requests go straight to the new skill.
 
 ## What CI checks
 

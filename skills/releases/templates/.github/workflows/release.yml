@@ -1,0 +1,42 @@
+# Builds a draft release by hand: Actions > Release > Run workflow, then type the version.
+# A person checks the draft (verify-release.sh) and publishes it. Nothing here publishes.
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, like 1.2.0 (no v)"
+        required: true
+permissions:
+  contents: write        # create the draft release and its tag
+  id-token: write        # sign the build provenance
+  attestations: write    # store it
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        env:
+          VERSION: ${{ inputs.version }}
+        # Replace with the project's real build. Everything it writes to dist/ is released.
+        run: |
+          mkdir -p dist
+          echo "Replace this step with the project's build for $VERSION" && exit 1
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        # Uses the running draft's notes if there is one, so nothing written along the way is lost.
+        run: |
+          notes=$(gh release view "v$VERSION" --json body --jq .body 2>/dev/null || true)
+          gh release delete "v$VERSION" --yes 2>/dev/null || true
+          gh release create "v$VERSION" dist/* --draft --target "$GITHUB_SHA" --title "v$VERSION" --notes "${notes:-Release notes go here.}"
