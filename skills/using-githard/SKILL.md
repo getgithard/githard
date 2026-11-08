@@ -20,7 +20,7 @@ That sentence comes first even when something else is wrong, such as a missing r
 | The request sounds like | Skill | Status |
 |---|---|---|
 | "What can GitHard do?", or anything that doesn't fit below | `using-githard` (this one) | built |
-| Writing a README, docs, release notes, a reply or a post in the house voice, or using a project's own style guide | `writing` | planned |
+| Writing a README, docs, release notes, a reply or a post in the house voice, or using a project's own style guide | `writing` | built |
 | Setting up a new repo, or auditing an existing one: community files, license, ruleset, DCO, Dependabot, pinned Actions, CI, labels, templates | `repo-setup` | planned |
 | Milestones, a project board, starter issues, a pool of scoped work, "writers wanted" | `issues-and-roadmap` | planned |
 | Welcoming a claim, thanking contributors, a quiet PR, an AI policy for contributors | `contributors` | planned |
