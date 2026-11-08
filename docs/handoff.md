@@ -22,3 +22,16 @@ Gotchas:
 Next: #2 (`writing`).
 
 Open questions for James: the plugin has no icon. The directory wants a square PNG at `.claude-plugin/icon.png`, 512 to 2048 px.
+
+## 2026-11-08 ~20:45 UTC: M1 done
+
+Done: #2 `writing` (#21), #3 `repo-setup` (#22), and #4, the eval CI checks (this PR). All of M1 is built. The full suite, run with `--runs 3 --scaffold --allow-tools Bash Write Edit --judge-model sonnet`, passes every case with the plugin.
+
+Gotchas:
+- `claude plugin eval --case` keeps only the last glob. Filter by skill with `--tag <skill>`. Every case's `prompt.md` has `tags: [<skill>]`.
+- On three writing cases (style guide, rewrite, release notes), Claude without the plugin already passes. They're regression guards. Only `first-pr-reply` shows the skill making a difference.
+- An eval with a scaffold needs `--scaffold`. One that writes files or runs Bash needs `--allow-tools Bash Write Edit`.
+
+Waiting on James (repo settings, so they need his yes): `bash skills/repo-setup/audit.sh jamesconwaydev/githard` reports this repo has no CODEOWNERS, no DCO check in CI, Dependabot alerts off and web-commit sign-off off. The plugin icon is still open too.
+
+Next: M2, starting with #5 (`contributors`).

@@ -11,3 +11,7 @@ claude plugin eval . --scaffold --allow-tools Bash Write Edit --judge-model sonn
 `--scaffold` runs each case's `scaffold.sh`, which builds a small throwaway repo for the case to work in. Only pass it for cases you've read. The repo-setup cases write files and run `audit.sh`, which is why they need `--allow-tools`. Filter by skill with `--tag <skill>`.
 
 Use the sonnet judge. With the default haiku judge, the same reply sometimes passes and sometimes fails. Results go to `evals/results/`, which git ignores.
+
+## What CI checks
+
+The evals need Claude credentials, so CI doesn't run them. `scripts/check.sh` does the parts that don't need them: every case has a tagged `prompt.md` and typed graders, every `scaffold.sh` runs in an empty folder, and `audit.sh` flags every gap in the `audit-existing` scaffold. Run the evals yourself before you merge a skill change.
