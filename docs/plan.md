@@ -10,7 +10,7 @@ The plugin skeleton, the manifests, this plan, `docs/design.md`, `knowledge/`, r
 
 1. **`using-githard`:** the entry skill and its routing table. Done when a request for each planned skill reaches the right one in evals, including skills that don't exist yet, where it says so plainly.
 2. **`writing`:** the house voice as a skill, with before and after examples, and swapping in a project's own style guide.
-3. **`repo-setup`:** new-repo setup, and an audit that checks a young repo before it goes public. Ships the community-file templates. Done when, on a scratch repo, it produces every file on its checklist and the audit flags each missing item.
+3. **`repo-setup`:** new-repo setup and an audit mode for existing repos. Ships the community-file templates. Done when, on a scratch repo, it produces every file on its checklist and the audit flags each missing item.
 4. **Eval harness:** `evals/` layout, a first case per M1 skill, and a CI job that runs what can run without secrets.
 
 ## M2: People

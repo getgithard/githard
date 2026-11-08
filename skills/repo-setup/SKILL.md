@@ -1,11 +1,11 @@
 ---
 name: repo-setup
-description: Use when creating a new GitHub repo, getting a new repo ready to go public, or checking how a young repo is set up, including community files, a license, branch protection or rulesets, DCO sign-off, Dependabot, pinned GitHub Actions, CI, issue and PR templates, CODEOWNERS, private vulnerability reporting or Discussions.
+description: Use when creating a new GitHub repo, getting a repo ready to go public, or checking how an existing repo is set up, including community files, a license, branch protection or rulesets, DCO sign-off, Dependabot, pinned GitHub Actions, CI, issue and PR templates, CODEOWNERS, private vulnerability reporting or Discussions.
 ---
 
 # Repo setup
 
-A new GitHub repo starts with everything off: no ruleset, no private vulnerability reporting, nothing stopping a push straight to `main`. This skill gets a new repo to where you'd want it a year from now, and its audit checks a young repo against the same list before it goes public.
+A new GitHub repo starts with everything off: no ruleset, no private vulnerability reporting, nothing stopping a push straight to `main`. This skill gets a new repo to where you'd want it a year from now. For an existing repo, it audits it against the same list and fixes the gaps.
 
 The reasons behind every item are in `knowledge/lessons.md` (Repo setup), at the plugin root two folders up from this file.
 

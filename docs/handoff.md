@@ -38,7 +38,7 @@ Next: M2, starting with #5 (`contributors`).
 
 ## 2026-11-08 ~21:00 UTC: audit gaps closed
 
-James's standing rule: fix every gap and bug found along the way, don't just report it. GitHard is for new orgs and repos, not for retrofitting old ones, and the docs and the repo-setup wording now say so.
+James's standing rule: fix every gap and bug found along the way, don't just report it. GitHard is for new and existing orgs and repos alike, and `docs/design.md` now says so.
 
 Done: Dependabot alerts and web-commit sign-off are on (both API calls). This PR adds CODEOWNERS and a `dco` CI job. Once it merges, `dco` gets added to the `protect-main` ruleset as a required check.
 
