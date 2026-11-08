@@ -55,3 +55,20 @@ Done since the last entry: #6 `fork-pr-safety` and the `fork-pr-reviewer` agent 
 In progress: the website (`getgithard/githard-site`), with the home page on githard.dev and the docs on docs.githard.dev, both on Cloudflare Pages. Also Tank, the bulldog mascot, rendered locally with Z-Image-Turbo (`mflux`, `-q 8`).
 
 Next: #7 (`issues-and-roadmap`).
+
+## 2026-11-08 ~23:10 UTC: M3 under way, site live
+
+Done since the last entry:
+- #7 `issues-and-roadmap` (#36). This repo now has issue types, a public board (getgithard project 1) with sizes, #16 blocking #17 blocking #18, and starter issues #30 to #35. The pool is at 6 of 10.
+- #8 `merging` (#37). `merge-when-green.sh` merged its own PR. Skills use `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PLUGIN_ROOT}` now.
+- `audit.sh` honours `.github/audit-skip` (#29).
+- The site is live: githard.dev and docs.githard.dev, from `getgithard/githard-site`, on Cloudflare Pages with Git integration. Its projects are `githard` (output `www`) and `githard-docs` (root `docs`). Tank is final.
+
+Images for James are in `~/Desktop/GitHard uploads/`: `org-avatar.png` and the social previews.
+
+Gotchas:
+- Image generation: Z-Image-Turbo through `mflux`, run with `-q 8 --low-ram`. It peaks at 26 GB, takes about 14 minutes an image, and only one can run at a time. Rebuild the site images with `scripts/make-assets.py CUTOUT HEAD_BOX OUT`, after a `rembg -m isnet-anime` cutout.
+- Headless Chrome won't go narrower than about 500 px. Check mobile layouts with Playwright's iPhone 13 device.
+- When a skill ships, retarget the `planned-*` eval that names it (see `evals/README.md`).
+
+Next: #9 (`releases`).
