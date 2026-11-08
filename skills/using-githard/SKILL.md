@@ -23,7 +23,7 @@ That sentence comes first even when something else is wrong, such as a missing r
 | Writing a README, docs, release notes, a reply or a post in the house voice, or using a project's own style guide | `writing` | built |
 | Setting up a new repo, or auditing an existing one: community files, license, ruleset, DCO, Dependabot, pinned Actions, CI, labels, templates | `repo-setup` | built |
 | Milestones, a project board, starter issues, a pool of scoped work, "writers wanted" | `issues-and-roadmap` | planned |
-| Welcoming a claim, thanking contributors, a quiet PR, an AI policy for contributors | `contributors` | planned |
+| Welcoming a claim, thanking contributors, a quiet PR, an AI policy for contributors, PRs still waiting on a reply | `contributors` | built |
 | A PR from a fork: reading it before CI runs, approving runs, DCO trouble | `fork-pr-safety` | planned |
 | Merging when CI is green, a queue of PRs, flaky checks, the API limit | `merging` | planned |
 | Cutting, verifying or publishing a release, and what comes after | `releases` | planned |
