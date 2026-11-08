@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+  # Add one entry like the one above for the project's own packages
+  # (npm, pip, gomod, cargo...), also monthly and grouped.

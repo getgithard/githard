@@ -1,0 +1,3 @@
+# Every change asks the owner for review. Changes to CI and repo settings always do.
+* @{{OWNER}}
+/.github/ @{{OWNER}}

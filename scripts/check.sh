@@ -18,4 +18,11 @@ for f in skills/*/SKILL.md agents/*.md; do
     sed -n '2,/^---$/p' "$f" | grep -q "^$key:" || { echo "$f: frontmatter has no $key"; fail=1; }
   done
 done
+# The repo-setup templates, plus a README and a LICENSE, must pass that skill's own audit.
+tmp=$(mktemp -d)
+cp -R skills/repo-setup/templates/. "$tmp"
+touch "$tmp/README.md" "$tmp/LICENSE"
+audit=$(cd "$tmp" && bash "$OLDPWD/skills/repo-setup/audit.sh") || true
+grep '^missing' <<<"$audit" && { echo "repo-setup templates fail their own audit"; fail=1; }
+rm -rf "$tmp"
 exit $fail
