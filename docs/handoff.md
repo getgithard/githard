@@ -45,3 +45,13 @@ Done: Dependabot alerts and web-commit sign-off are on (both API calls). This PR
 Note: `CLAUDE.md` is in James's global git ignore, so it isn't in the repo. Changes to it only apply on his machine.
 
 Next: #5 (`contributors`). The icon is still waiting on James.
+
+## 2026-11-08 ~23:30 UTC: moved to getgithard
+
+The repo now lives at `getgithard/githard`, and GitHub redirects the old `jamesconwaydev/githard` URLs. James created the org. The audit passes 21 of 21 at the new address. James also asked GitHub Support about the inactive `githard` username. If it's released, rename the org.
+
+Done since the last entry: #6 `fork-pr-safety` and the `fork-pr-reviewer` agent (#26). Fork CI approval for this repo is now `all_external_contributors`. #27 fixed the not-built sentence going missing from the final answer, and replaced the stale `planned-fork-pr` eval with `planned-merging`. In the full eval run, every case passes with the plugin.
+
+In progress: the website (`getgithard/githard-site`), with the home page on githard.dev and the docs on docs.githard.dev, both on Cloudflare Pages. Also Tank, the bulldog mascot, rendered locally with Z-Image-Turbo (`mflux`, `-q 8`).
+
+Next: #7 (`issues-and-roadmap`).

@@ -12,7 +12,7 @@ It's built from what worked, and what broke, while running a real open-source pr
 
 ## Contributing
 
-Ideas and bug reports are welcome in [Issues](https://github.com/jamesconwaydev/githard/issues) and [Discussions](https://github.com/jamesconwaydev/githard/discussions). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Ideas and bug reports are welcome in [Issues](https://github.com/getgithard/githard/issues) and [Discussions](https://github.com/getgithard/githard/discussions). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 

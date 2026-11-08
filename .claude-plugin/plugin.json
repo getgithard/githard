@@ -6,8 +6,8 @@
     "name": "James Conway",
     "url": "https://github.com/jamesconwaydev"
   },
-  "homepage": "https://github.com/jamesconwaydev/githard",
-  "repository": "https://github.com/jamesconwaydev/githard",
+  "homepage": "https://github.com/getgithard/githard",
+  "repository": "https://github.com/getgithard/githard",
   "license": "MIT",
   "keywords": ["github", "open-source", "maintainers", "repository", "organization", "releases", "contributors"]
 }

@@ -84,4 +84,4 @@ None planned for the first release. Revisit once the skills exist. A candidate i
 
 - **Evals:** each skill ships with cases in `evals/` that run with `claude plugin eval` and pass against a no-plugin baseline.
 - **Proof:** the owner builds a few new products with GitHard from an empty org, and each one ends up with a perfect repo-setup audit, a passing OpenSSF Best Practices badge, and a release made with the releases skill.
-- **Launch:** before the new year, listed in its own marketplace (`/plugin install githard --marketplace jamesconwaydev/githard`), with a README that shows a real before and after.
+- **Launch:** before the new year, listed in its own marketplace (`/plugin install githard --marketplace getgithard/githard`), with a README that shows a real before and after.
