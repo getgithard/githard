@@ -68,4 +68,11 @@ done
 for log in "AssertionError: expected 3 to equal 4" "npm ERR! Missing script: test" "error TS2322: Type 'string' is not assignable"; do
   [ "$(echo "$log" | bash $mwg --classify)" = real ] || { echo "merge-when-green.sh called a real failure a flake: $log"; fail=1; }
 done
+# audit-docs.sh flags a subcommand and a flag the help text doesn't list, and passes the ones it does.
+s=$(mktemp -d); mkdir "$s/docs"
+printf '```sh\n$ jot list --json\njot sync --watch\n```\n' > "$s/docs/usage.md"
+audit=$(bash skills/docs-honesty/audit-docs.sh "$s/docs" --no-links --tool jot --help-cmd "printf 'list --json'") || true
+rm -rf "$s"
+grep -q 'jot sync. isn.t in the help' <<<"$audit" && grep -q -- '--watch. isn.t in the help' <<<"$audit" && ! grep -q -- '--json' <<<"$audit" ||
+  { echo "audit-docs.sh got the flag check wrong: $audit"; fail=1; }
 exit $fail

@@ -1,6 +1,6 @@
 ---
 name: using-githard
-description: Use when someone asks what GitHard can do, or asks for help setting up or running a GitHub org or repo and it isn't clear which GitHard skill fits. Also use for any request about a GitHard skill that isn't built yet: checking docs against a release (docs-honesty), OpenSSF Scorecard, Best Practices badges, secrets handling or signed releases (security-baseline), a new org's profile, .github repo or verified domain (org-setup), getting a project seen (growth), or handoff files and resuming sessions (save-point).
+description: Use when someone asks what GitHard can do, or asks for help setting up or running a GitHub org or repo and it isn't clear which GitHard skill fits. Also use for any request about a GitHard skill that isn't built yet: OpenSSF Scorecard, Best Practices badges, secrets handling or signed releases (security-baseline), a new org's profile, .github repo or verified domain (org-setup), getting a project seen (growth), or handoff files and resuming sessions (save-point).
 ---
 
 # Using GitHard
@@ -27,7 +27,7 @@ It comes first even when something else is wrong, such as a missing repo or an e
 | A PR from a fork: reading it before CI runs, approving runs, DCO trouble, whether workflows are safe for forks | `fork-pr-safety` | built |
 | Merging when CI is green, a queue of PRs, flaky checks, the API limit | `merging` | built |
 | Cutting, verifying or publishing a release, release notes, attestations, tagging a plugin, and what comes after | `releases` | built |
-| Checking the docs only say what shipped, a docs audit per release | `docs-honesty` | planned |
+| Checking the docs only say what shipped, a docs audit per release, dead links, invented output | `docs-honesty` | built |
 | OpenSSF Scorecard or Best Practices, secrets, signed releases, SECURITY.md | `security-baseline` | planned |
 | A new org: profile README, the `.github` repo, verified domain, pinned repos | `org-setup` | planned |
 | Getting the project seen: directories, starter repos, Show and tell, giving back | `growth` | planned |
