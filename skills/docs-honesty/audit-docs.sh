@@ -17,7 +17,9 @@ files=$(grep -rlE . "$docs" --include='*.md' --include='*.mdx' 2>/dev/null; [ -f
 status=0
 
 if [ $links = 1 ]; then
-  found=$(grep -noE 'https?://[^] )"'"'"'<>`]+' $files /dev/null | sed -E 's/[.,;:]+$//' | sort -t: -k3 -u |
+  # Links in prose only: URLs inside code blocks and `inline code` are examples, not links.
+  found=$(awk 'FNR==1{fence=0} /^```/{fence=!fence; next} !fence { gsub(/`[^`]*`/, ""); if (match($0, /https?:\/\/[^] )"'"'"'<>`]+/)) { line=$0
+      while (match(line, /https?:\/\/[^] )"'"'"'<>`]+/)) { print FILENAME":"FNR":"substr(line, RSTART, RLENGTH); line=substr(line, RSTART+RLENGTH) } } }' $files | sed -E 's/[.,;:]+$//' | sort -t: -k3 -u |
   while IFS= read -r hit; do
     where=${hit%%:http*}; url=${hit#"$where":}
     code=$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)

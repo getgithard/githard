@@ -68,6 +68,11 @@ done
 for log in "AssertionError: expected 3 to equal 4" "npm ERR! Missing script: test" "error TS2322: Type 'string' is not assignable"; do
   [ "$(echo "$log" | bash $mwg --classify)" = real ] || { echo "merge-when-green.sh called a real failure a flake: $log"; fail=1; }
 done
+# audit-docs.sh ignores URLs inside code: they're examples.
+s=$(mktemp -d); printf '```\nhttps://example.invalid/x\n```\nSee `https://example.invalid/y`.\n' > "$s/a.md"
+[ -z "$(bash skills/docs-honesty/audit-docs.sh "$s" 2>&1)" ] || { echo "audit-docs.sh checked URLs inside code"; fail=1; }
+rm -rf "$s"
+
 # audit-docs.sh flags a subcommand and a flag the help text doesn't list, and passes the ones it does.
 s=$(mktemp -d); mkdir "$s/docs"
 printf '```sh\n$ jot list --json\njot sync --watch\n```\n' > "$s/docs/usage.md"
