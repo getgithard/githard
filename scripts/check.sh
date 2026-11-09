@@ -104,4 +104,8 @@ s=$(mktemp -d); bash skills/repo-setup/fill-templates.sh "$s" --project jot --re
 grep -qx 'To report a problem, email c@jot.dev. Only the maintainers read it.' "$s/CODE_OF_CONDUCT.md" ||
   { echo "fill-templates.sh garbled the contact line: $(grep 'report a problem' "$s/CODE_OF_CONDUCT.md")"; fail=1; }
 rm -rf "$s"
+# Every tool the Brewfile lists is on the PATH (brew "python@3" provides python3).
+while read -r tool; do
+  command -v "$tool" >/dev/null || { echo "Brewfile lists $tool, but it isn't installed"; fail=1; }
+done < <(sed -nE 's/^brew "([a-z]+)(@3)?".*/\1\2/p' Brewfile | sed 's/^python@3$/python3/')
 exit $fail
