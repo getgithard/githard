@@ -23,3 +23,14 @@ AI-assisted contributions are welcome. You're responsible for every line you sub
 ## When a pull request goes quiet
 
 If a PR has had no activity for 30 days, a maintainer checks in. At 60 days we either close it or finish it ourselves and credit you. There's no stale bot.
+
+## Code review
+
+Every change reaches `main` through a pull request, and its checks must pass. A reviewer checks that the change:
+
+- does what the PR says, and nothing it doesn't say
+- comes with eval cases for skill behaviour, or a `scripts/check.sh` test for scripts
+- doesn't weaken security: secrets, permissions, pinned Actions, untrusted input
+- updates the docs along with the behaviour
+
+GitHard has one maintainer today, so most PRs are reviewed by their author before they merge. Outside PRs always get a maintainer review. Gold needs at least half of the changes in a release reviewed by someone other than the author, and that waits on a second maintainer. See [GOVERNANCE.md](GOVERNANCE.md).
