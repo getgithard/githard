@@ -7,13 +7,16 @@ on:
       version:
         description: "Version to release, like 1.2.0 (no v)"
         required: true
+# Read-only by default. Only the job that needs write access gets it (OpenSSF Scorecard: Token-Permissions).
 permissions:
-  contents: write        # create the draft release and its tag
-  id-token: write        # sign the build provenance
-  attestations: write    # store it
+  contents: read
 jobs:
   draft:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # create the draft release and its tag
+      id-token: write        # sign the build provenance
+      attestations: write    # store it
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
