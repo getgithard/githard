@@ -16,5 +16,6 @@ Built so far:
 - [`org-setup`](org-setup/SKILL.md): the org's profile README and `.github` repo, a verified domain, pins and member defaults, with every setting handed to the owner. `org-audit.sh` checks an org, and `bootstrap-dotgithub.sh` is the one command the owner runs.
 - [`security-baseline`](security-baseline/SKILL.md): OpenSSF Scorecard measured weekly, honest about the checks only other people can satisfy, secret scanning, secrets handling, and unsigned upstreams. `scorecard-check.sh` lists what's fixable.
 - [`growth`](growth/SKILL.md): your own surfaces first, Show and tell only where it's alive, never spam on strangers' repos, giving back within each project's AI policy (`ai-policy-check.sh`), and measuring every channel (`traffic.sh`).
+- [`save-point`](save-point/SKILL.md): a running handoff file, decisions written where the next session reads them, and a fixed order for starting a session. `save-point.sh` drafts the facts from GitHub.
 
 The rest of the planned skills, their order and what "done" means for each are in [`docs/design.md`](../docs/design.md) and [`docs/plan.md`](../docs/plan.md).
