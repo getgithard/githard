@@ -10,6 +10,7 @@ GitHard is a Claude Code plugin. There's no server and no build: it's Markdown i
 - **`knowledge/`:** `lessons.md` holds the field notes every skill is built from, and `voice.md` the house voice. Skills point to them through `${CLAUDE_PLUGIN_ROOT}` instead of copying them.
 - **`evals/<skill>/<case>/`:** eval cases (`prompt.md`, graders, sometimes a `scaffold.sh` that builds a throwaway repo) run with `claude plugin eval`.
 - **`scripts/check.sh`:** the checks CI runs without credentials.
+- **`Brewfile`:** the tools the scripts need (`bash`, `gh`, `git`, `curl`, `jq`, `python3`, `rsync`, `shellcheck`). `brew bundle` installs them, and `check.sh` makes sure each one is there.
 
 ## How a request flows
 
