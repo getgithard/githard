@@ -61,7 +61,7 @@ Every pull request went through CI and a DCO check, and GitHard's merge script m
 
 ## What's in it
 
-Fourteen skills, each with evals that run with and without the plugin:
+Fifteen skills, each with evals that run with and without the plugin:
 
 - **Setting up:** `repo-setup`, `org-setup`, `agent-toolkit` (the Claude Code plugins, MCP servers and language servers a project needs)
 - **People:** `contributors`, `fork-pr-safety`, `issues-and-roadmap`
