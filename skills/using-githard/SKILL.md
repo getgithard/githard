@@ -1,6 +1,6 @@
 ---
 name: using-githard
-description: Use when someone asks what GitHard can do, or asks for help setting up or running a GitHub org or repo and it isn't clear which GitHard skill fits. Also use for any request about a GitHard skill that isn't built yet: getting a project seen (growth), or handoff files and resuming sessions (save-point).
+description: Use when someone asks what GitHard can do, or asks for help setting up or running a GitHub org or repo and it isn't clear which GitHard skill fits. Also use for any request about a GitHard skill that isn't built yet: handoff files and resuming sessions (save-point).
 ---
 
 # Using GitHard
@@ -30,7 +30,7 @@ It comes first even when something else is wrong, such as a missing repo or an e
 | Checking the docs only say what shipped, a docs audit per release, dead links, invented output | `docs-honesty` | built |
 | OpenSSF Scorecard or Best Practices, secrets, signed releases, SECURITY.md, unsigned upstreams | `security-baseline` | built |
 | A new or existing org: profile README, the `.github` repo, verified domain, pinned repos, member defaults | `org-setup` | built |
-| Getting the project seen: directories, starter repos, Show and tell, giving back | `growth` | planned |
+| Getting the project seen: starter repos, Show and tell, giving back, measuring channels | `growth` | built |
 | A handoff file, remembering decisions, resuming where the last session stopped | `save-point` | planned |
 
 A request can span rows. Take them in the order the work happens: org, then repo, then issues, then people, then shipping.
