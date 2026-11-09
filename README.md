@@ -1,5 +1,6 @@
 # GitHard
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16471/badge)](https://www.bestpractices.dev/projects/16471)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/getgithard/githard/badge)](https://scorecard.dev/viewer/?uri=github.com/getgithard/githard)
 
 Makes AI build and manage your GitHub repos perfectly.
