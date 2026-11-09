@@ -46,7 +46,7 @@ fi
 
 repo=${1:-}
 if [ -z "$repo" ] || ! command -v gh >/dev/null || ! gh api "repos/$repo" --jq .full_name >/dev/null 2>&1; then
-  for item in "ruleset on the default branch" "private vulnerability reporting" "Discussions" "Dependabot alerts" "sign-off required on web commits"; do
+  for item in "ruleset on the default branch" "private vulnerability reporting" "Discussions" "Dependabot alerts" "secret scanning with push protection" "sign-off required on web commits"; do
     report unknown "$item (needs gh and an owner/repo)"
   done
   exit $missing
@@ -65,6 +65,8 @@ case $pvr in true) report ok "private vulnerability reporting" ;; false) report 
 disc=$(gh api "repos/$repo" --jq .has_discussions 2>/dev/null)
 case $disc in true) report ok "Discussions" ;; false) report missing "Discussions" ;; *) report unknown "Discussions" ;; esac
 if gh api "repos/$repo/vulnerability-alerts" >/dev/null 2>&1; then report ok "Dependabot alerts"; else report missing "Dependabot alerts"; fi
+ss=$(gh api "repos/$repo" --jq '"\(.security_and_analysis.secret_scanning.status) \(.security_and_analysis.secret_scanning_push_protection.status)"' 2>/dev/null)
+case $ss in "enabled enabled") report ok "secret scanning with push protection" ;; *null*|"") report unknown "secret scanning with push protection" ;; *) report missing "secret scanning with push protection" ;; esac
 web=$(gh api "repos/$repo" --jq .web_commit_signoff_required 2>/dev/null)
 case $web in true) report ok "sign-off required on web commits" ;; false) report missing "sign-off required on web commits" ;; *) report unknown "sign-off required on web commits" ;; esac
 exit $missing

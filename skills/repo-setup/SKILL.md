@@ -21,6 +21,7 @@ The reasons behind every item are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md
 | Every Action pinned to a full commit SHA | you | Version in a comment: `uses: actions/checkout@<40-char sha> # v7.0.1`. Look up the SHA for a tag with `gh api repos/actions/checkout/commits/v7.0.1 --jq .sha`. |
 | Ruleset: `main` is PR-only, required checks, branches don't have to be up to date | **owner** | It's a ruleset change, so ask first. Then `gh api repos/OWNER/REPO/rulesets --input ${CLAUDE_SKILL_DIR}/ruleset.json`. The check names in it must match the CI job names. |
 | Private vulnerability reporting | you | `gh api -X PUT repos/OWNER/REPO/private-vulnerability-reporting` |
+| Secret scanning and push protection | you | `gh api -X PATCH repos/OWNER/REPO --input -` with `{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}` |
 | Dependabot alerts | you | `gh api -X PUT repos/OWNER/REPO/vulnerability-alerts` |
 | Sign-off required on web commits | you | `gh api -X PATCH repos/OWNER/REPO -F web_commit_signoff_required=true` |
 | Discussions | you | `gh repo edit OWNER/REPO --enable-discussions` |
