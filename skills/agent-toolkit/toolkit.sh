@@ -39,7 +39,8 @@ has 'package.json' 'pyproject.toml' 'requirements*.txt' 'go.mod' 'Cargo.toml' 'G
 [ $code = 1 ] || has '*.md' && pick superpowers@claude-plugins-official "plans, test-driven work, debugging, reviews"
 [ $code = 1 ] && pick ponytail@ponytail "the smallest change that fully solves the task"
 [ $deps = 1 ] && pick context7@claude-plugins-official "current docs for the libraries in your dependencies"
-git remote get-url origin 2>/dev/null | grep -q github.com && pick githard@githard "running the repo: issues, PRs, releases, security"
+# A GitHub remote, or a .github folder in a repo that hasn't been pushed yet.
+{ git remote get-url origin 2>/dev/null | grep -q github.com || [ -d .github ]; } && pick githard@githard "running the repo: issues, PRs, releases, security"
 if grep -qsE '"(react|vue|svelte|astro|next|nuxt|@sveltejs/kit|solid-js)"' package.json; then
   pick frontend-design@claude-plugins-official "a web UI to design"
   pick playwright@claude-plugins-official "a web UI to test in a real browser"
@@ -67,3 +68,7 @@ for p in "${picks[@]}"; do
 done
 [ "${show:-0}" = 1 ] && { cat "$f"; exit 1; }
 echo "wrote $f. Commit it, so everyone who clones and trusts the repo gets the same tools."
+# Plenty of people ignore .claude/ globally. The shared settings file has to be added on purpose.
+if rule=$(git check-ignore -v "$f" 2>/dev/null); then
+  echo "note: git ignores $f (${rule%%	*}). Commit it anyway with: git add -f $f"
+fi

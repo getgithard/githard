@@ -13,7 +13,7 @@ The reasons behind every item are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md
 
 | Item | Who | How |
 |---|---|---|
-| README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT | you | Copy from `${CLAUDE_SKILL_DIR}/templates/` and fill in every `{{PLACEHOLDER}}`. Keep any file the repo already has. |
+| README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, and the files below | you | `bash ${CLAUDE_SKILL_DIR}/fill-templates.sh DIR --project NAME --repo OWNER/REPO --owner HANDLE --contact "email ..."` copies every template, fills every placeholder, and keeps any file the repo already has. Write the README yourself. |
 | LICENSE | **owner** | It's a legal choice, so ask. Offer MIT (permissive), Apache-2.0 (permissive, with a patent grant) or GPL-3.0 (changes stay open). Then fetch the text: `gh api licenses/mit --jq .body > LICENSE`, and fill in the year and name. |
 | Issue templates, PR template, CODEOWNERS | you | `${CLAUDE_SKILL_DIR}/templates/.github/`. |
 | Dependabot, grouped and monthly | you | `${CLAUDE_SKILL_DIR}/templates/.github/dependabot.yml`. Add an entry for the project's own package manager too. |

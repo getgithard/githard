@@ -98,4 +98,10 @@ s=$(mktemp -d); here=$PWD
   { echo "toolkit.sh didn't set up a TypeScript repo"; fail=1; }
 rm -rf "$s"
 grep -v '^#' skills/agent-toolkit/vetted.tsv | awk -F'\t' 'NF != 5 {bad=1; print "vetted.tsv row has " NF " fields: " $1} END {exit bad}' || fail=1
+# fill-templates.sh leaves no placeholder behind.
+s=$(mktemp -d); bash skills/repo-setup/fill-templates.sh "$s" --project jot --repo jotco/jot --owner sam --contact "email c@jot.dev" >/dev/null ||
+  { echo "fill-templates.sh left a placeholder"; fail=1; }
+grep -qx 'To report a problem, email c@jot.dev. Only the maintainers read it.' "$s/CODE_OF_CONDUCT.md" ||
+  { echo "fill-templates.sh garbled the contact line: $(grep 'report a problem' "$s/CODE_OF_CONDUCT.md")"; fail=1; }
+rm -rf "$s"
 exit $fail
