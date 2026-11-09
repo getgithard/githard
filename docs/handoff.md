@@ -129,3 +129,30 @@ Gotchas:
 - npm uses staged publishing for this account: `npm stage publish`, then `npm stage approve <id>`, which needs 2FA in a browser.
 - Auto mode blocks publishing releases and merging outside contributors' PRs. Hand both to James with the exact command.
 - The release smoke test should run binaries from inside a project with default flags. That's how the 0.1.1 bug slipped past.
+
+## 2026-11-09 05:45 UTC: paused for James's review
+
+**Paused on purpose.** James is reviewing GitHard and keyparity overnight. Next session: start by asking James for his findings, make the changes he asks for, and only then move on (#18 launch or #77 coverage, his choice). Don't start new work before he's shared them.
+
+**Where things are** (all on `main`, clean, no open PRs, merged branches deleted):
+
+| Local folder (`~/Documents/GitHub/`) | Remote | State |
+|---|---|---|
+| `githard` | getgithard/githard | v0.1.0 released, 15 skills, OpenSSF 16471 at passing (196/300) |
+| `githard-site` | getgithard/githard-site | githard.dev and docs.githard.dev live on Cloudflare Pages (`githard-site`, `githard-docs`) |
+| `keyparity` | keyparity/keyparity | v0.1.2 on GitHub and npm, OpenSSF 16475 at passing |
+| `getgithard-dotgithub` | getgithard/.github | not a git checkout. Change it, then re-run `bootstrap-dotgithub.sh`, which opens a PR |
+| `keyparity-dotgithub` | keyparity/.github | same as above |
+
+**Open issues worth knowing:** #18 (launch), #59 (silver, then gold), #77 (coverage), #15 (dogfood log, all eight gaps fixed), keyparity v0.2.0 (#18, #19, #20 are starter issues for contributors).
+
+**To check everything is healthy after a restart:**
+```sh
+cd ~/Documents/GitHub/githard && git pull && scripts/check.sh
+bash skills/repo-setup/audit.sh getgithard/githard
+bash skills/contributors/unanswered.sh getgithard/githard
+bash skills/contributors/unanswered.sh keyparity/keyparity
+bash skills/openssf-badge/badge-status.sh 16471 silver
+```
+
+Not ours, so leave them alone: a podman VM, a Playwright test server and a merge script from another project may be running on this Mac.
