@@ -110,3 +110,22 @@ Gotchas:
 - Auto mode blocks creating public repos, org PATCH calls, and writing `.claude/` in the working repo. Use `bootstrap-repo.sh` and `bootstrap-dotgithub.sh`, and hand over the commands. James may add `/permissions` rules for his two orgs.
 - James's global gitignore excludes `**/.claude/` and `CLAUDE.md`. Shared `.claude/settings.json` needs `git add -f`.
 - Cloudflare caps a header line at about 2,000 characters. The docs CSP is 1,838, and `csp-headers.py` fails the build past 2,000.
+
+## 2026-11-09 05:30 UTC: githard--v0.1.0 released
+
+Done:
+- **githard--v0.1.0** is published, with an attested source tarball. The release workflow runs on `githard--v*` tags. A clean config installs 0.1.0 with 15 skills and 2 agents. #16 and #17 are closed.
+- **README** has a real before and after (keyparity's org audit) and the install line. The site and docs say how to install.
+- **First outside contribution:** @foothillsdigital, #73, thanked in the release notes. `unanswered.sh` now flags unanswered issue claims too (#71).
+- **keyparity:** 0.1.2 is on npm (the 0.1.1 default-path bug is fixed, and 0.1.1 is deprecated). Its org audit passes, apart from two items skipped on purpose. It has the OpenSSF passing badge (16475).
+- **OpenSSF for GitHard (16471):** 196 of 300, with every silver criterion answered. The docs (#66), shellcheck (#67) and the Brewfile (#76) are in.
+
+Next:
+1. #77: test coverage (a stub `gh` plus kcov) for silver.
+2. #18: launch. It needs James's choice of channels. Use the `growth` skill.
+3. A second getgithard owner (James), then silver.
+
+Gotchas:
+- npm uses staged publishing for this account: `npm stage publish`, then `npm stage approve <id>`, which needs 2FA in a browser.
+- Auto mode blocks publishing releases and merging outside contributors' PRs. Hand both to James with the exact command.
+- The release smoke test should run binaries from inside a project with default flags. That's how the 0.1.1 bug slipped past.
