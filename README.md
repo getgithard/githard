@@ -71,9 +71,18 @@ Fifteen skills, each with evals that run with and without the plugin:
 
 The docs are at [docs.githard.dev](https://docs.githard.dev).
 
-## Status
+## Install
 
-**Not released yet.** The first release, `githard--v0.1.0`, is planned before the new year, and this README will show the install command once it's out. Until then you can read [every skill](skills/), and follow the build in [`docs/plan.md`](docs/plan.md).
+In Claude Code:
+
+```text
+/plugin marketplace add getgithard/githard
+/plugin install githard@githard
+```
+
+Then ask for what you want in your own words: "set this repo up properly", "can I approve CI on this fork PR?", "cut a release". GitHard picks the skill that fits. If the skills don't show up straight away, start a new session.
+
+The [first release](https://github.com/getgithard/githard/releases/tag/githard--v0.1.0) is `githard--v0.1.0`. Its source is also published as a tarball with a build attestation, which you can check with `gh attestation verify githard--v0.1.0.tar.gz --repo getgithard/githard`.
 
 ## Contributing
 
