@@ -34,7 +34,7 @@ At the start of every session, before anything else, run:
 bash ${CLAUDE_SKILL_DIR}/unanswered.sh OWNER/REPO
 ```
 
-It lists outside PRs with no maintainer reply (`unanswered`), PRs quiet for 30 days (`check-in`) and PRs quiet for 60 days (`decide`). Exit 2 means it couldn't get an answer from GitHub. Report that as unknown, not as "nothing owed". If you can't run it at all, give the owner the exact command above and ask them to run it every session. A watcher that only shows new activity misses older PRs, and this check is what catches them.
+It lists outside PRs with no maintainer reply, and issues whose latest comment is from outside with no maintainer reply after it, such as a claim or a question (`unanswered`). It also lists PRs quiet for 30 days (`check-in`) and PRs quiet for 60 days (`decide`). Exit 2 means it couldn't get an answer from GitHub. Report that as unknown, not as "nothing owed". If you can't run it at all, give the owner the exact command above and ask them to run it every session. A watcher that only shows new activity misses older PRs, and this check is what catches them.
 
 ## No stale bot
 

@@ -15,7 +15,7 @@ We gave GitHard an empty GitHub org and a one-page plan for a small CLI, and let
 
 The org, the moment it was created:
 
-```
+```text
 $ bash org-audit.sh keyparity
 missing  display name
 missing  description
@@ -31,7 +31,7 @@ missing  pinned repos
 
 The same org after GitHard. The two skipped items were the owner's call: keyparity has no domain, and no public email.
 
-```
+```text
 $ bash org-audit.sh keyparity --skip "verified domain" --skip "public email"
 ok       display name
 ok       description
@@ -50,8 +50,8 @@ ok       .github has default issue templates
 ok       pinned repos (1)
 ```
 
-| | Before | After |
-|---|---|---|
+| What | Before | After |
+| --- | --- | --- |
 | Repo setup audit | no repo | 22 of 22 checks pass |
 | Releases | none | [v0.1.2](https://github.com/keyparity/keyparity/releases/latest): five binaries with checksums and build attestations, plus [npm](https://www.npmjs.com/package/keyparity) |
 | OpenSSF Best Practices | no project | [passing](https://www.bestpractices.dev/projects/16475) |
@@ -73,7 +73,7 @@ The docs are at [docs.githard.dev](https://docs.githard.dev).
 
 ## Status
 
-**Not released yet.** The first release, `githard--v0.1.0`, is planned before the new year, and this README will show the install command once it's out. Until then you can read every skill [here](skills/), and follow the build in [`docs/plan.md`](docs/plan.md).
+**Not released yet.** The first release, `githard--v0.1.0`, is planned before the new year, and this README will show the install command once it's out. Until then you can read [every skill](skills/), and follow the build in [`docs/plan.md`](docs/plan.md).
 
 ## Contributing
 
