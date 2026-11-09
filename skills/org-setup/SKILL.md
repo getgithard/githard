@@ -42,7 +42,7 @@ Once it exists, give `ORG/.github` the same treatment as any repo: run `repo-set
 bash ${CLAUDE_SKILL_DIR}/org-audit.sh ORG
 ```
 
-It prints `ok`, `missing` or `unknown` for each item. Settings only owners can see come back `unknown` for anyone else, never `ok`. Report what's missing in the order of the table, with the owner's steps for each.
+It prints `ok`, `missing`, `skipped` or `unknown` for each item. Add `--skip "verified domain"` (or any item's name, exactly as printed) for something that's off on purpose, such as a domain the project doesn't have. Settings only owners can see come back `unknown` for anyone else, never `ok`. Report what's missing in the order of the table, with the owner's steps for each.
 
 ## An existing org
 

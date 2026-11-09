@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # Audit a GitHub org against GitHard's org-setup checklist.
-# Usage: bash org-audit.sh ORG
+# Usage: bash org-audit.sh ORG [--skip "ITEM"]...
+#   --skip marks an item as off on purpose (such as "verified domain" for an org with no domain):
+#   it reports as skipped, never missing.
 # Prints ok | missing | unknown per item. Settings only an owner can see come back unknown
 # for anyone else, never ok. Exits 1 if anything is missing, 2 if GitHub didn't answer at all.
 set -uo pipefail
-org=${1:?usage: bash org-audit.sh ORG}
+org=${1:?usage: bash org-audit.sh ORG [--skip ITEM]...}; shift
+skips=""
+while [ $# -gt 0 ]; do case $1 in --skip) skips+="$2"$'\n'; shift 2 ;; *) echo "unknown option $1"; exit 2 ;; esac; done
 missing=0
-report() { printf '%-8s %s\n' "$1" "$2"; [ "$1" = missing ] && missing=1; return 0; }
+report() {
+  local state=$1
+  [ "$state" = missing ] && grep -qxF "$2" <<<"$skips" && state=skipped
+  printf '%-8s %s\n' "$state" "$2"; [ "$state" = missing ] && missing=1; return 0
+}
 yes_no() { case $2 in true) report ok "$1" ;; false) report missing "$1" ;; *) report unknown "$1 (owner only)" ;; esac; }
 has() { [ -n "$2" ] && [ "$2" != null ] && report ok "$1" || report missing "$1"; }
 

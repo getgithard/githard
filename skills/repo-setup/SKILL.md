@@ -26,7 +26,13 @@ The reasons behind every item are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md
 | Sign-off required on web commits | you | `gh api -X PATCH repos/OWNER/REPO -F web_commit_signoff_required=true` |
 | Discussions | you | `gh repo edit OWNER/REPO --enable-discussions` |
 
-Files go in through a PR like any other change. If the ruleset is already on, that's the only way in anyway.
+For a repo that doesn't exist yet, build its first commit in a local folder, then give the owner one command to create it and push:
+
+```sh
+bash ${CLAUDE_SKILL_DIR}/bootstrap-repo.sh OWNER/REPO /absolute/path/to/folder --description "..."
+```
+
+Agents are often blocked from creating public repos, and that's right, so the owner runs it. Then apply the settings and the ruleset. From there on, files go in through a PR like any other change.
 
 ## Setting up
 
