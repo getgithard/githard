@@ -45,6 +45,31 @@ After:
 
 Why: say what each change does for the reader, with the figure, and thank each person by handle next to their work. Leave out anything that didn't merge, even if it's nearly done.
 
+## CHANGELOG entry
+
+Before:
+
+> ## 2.1.0
+>
+> - Various fixes and improvements.
+
+After:
+
+> ## 2.1.0 (2026-03-14)
+>
+> **Before you upgrade:** `sync_dir` in `jot.toml` is now `folder`. Jot still reads the old name, and warns each time it starts until you rename it (#230).
+>
+> **Changed**
+>
+> - Search matches whole words. Add a `*` for the old prefix match: `meet*` finds "meeting" (#224).
+>
+> **Fixed**
+>
+> - `jot export` no longer skips images with a space in their path (#227).
+> - A note renamed on two devices at once keeps both copies instead of losing one (#233).
+
+Why: the person reading a changelog is deciding whether an upgrade breaks their setup. Put what they have to do first, say which behaviour changes under their fingers, and link every line to its issue. "Various fixes" tells them nothing, so they have to read the commits.
+
 ## Reply to a contributor
 
 Before:
