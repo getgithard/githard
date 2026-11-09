@@ -1,5 +1,7 @@
 # GitHard
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/getgithard/githard/badge)](https://scorecard.dev/viewer/?uri=github.com/getgithard/githard)
+
 Makes AI build and manage your GitHub repos perfectly.
 
 You've got an idea, a GitHub account and no maintainer experience. GitHard is a Claude Code plugin that sets up your org and repos the way you'd want them a year from now, then helps you run them: issues people can actually finish, a safe way to take contributions from strangers, merges that wait for green, releases you can verify, and docs that only say what's true.
