@@ -42,7 +42,7 @@ Say this plainly in the report, and don't call a score "perfect" while any of th
 | Static analysis (Scorecard's SAST check) | you | Copy `${CLAUDE_SKILL_DIR}/templates/.github/workflows/codeql.yml` and add the project's languages to its matrix. `actions` analyzes the workflows themselves. |
 | Workflow tokens read-only by default | you | `permissions: read-all` or `contents: read` at the top of every workflow, widened per job only where needed |
 | Signed releases | you | Build attestations in the release workflow. See `releases`. |
-| OpenSSF Best Practices badge | **owner** | Sign in at https://www.bestpractices.dev with GitHub, then **Get Your Badge Now**. You can prepare an answer for every question from what the repo already has, but the owner submits it. |
+| OpenSSF Best Practices badge | **owner** submits | Use the `openssf-badge` skill, which covers passing through gold. |
 | Badges in the README | you | Scorecard: `https://api.securityscorecards.dev/projects/github.com/OWNER/REPO/badge`. Best Practices: the URL bestpractices.dev gives after sign-up. |
 
 ## Secrets

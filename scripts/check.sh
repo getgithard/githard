@@ -80,4 +80,14 @@ audit=$(bash skills/docs-honesty/audit-docs.sh "$s/docs" --no-links --tool jot -
 rm -rf "$s"
 grep -q 'jot sync. isn.t in the help' <<<"$audit" && grep -q -- '--watch. isn.t in the help' <<<"$audit" && ! grep -q -- '--json' <<<"$audit" ||
   { echo "audit-docs.sh got the flag check wrong: $audit"; fail=1; }
+# openssf-badge: the criteria table has every level's prerequisite, and add-spdx.sh adds then finds nothing to add.
+awk -F'\t' '$1=="achieve_silver" && $2=="gold" && $3=="MUST" {found=1} END {exit !found}' skills/openssf-badge/criteria.tsv ||
+  { echo "criteria.tsv lost achieve_silver"; fail=1; }
+s=$(mktemp -d); here=$PWD
+( cd "$s" && git init -q && printf '#!/bin/sh\necho hi\n' > a.sh && git add a.sh &&
+  bash "$here/skills/openssf-badge/add-spdx.sh" "Test" MIT >/dev/null && sed -n 1p a.sh | grep -q '^#!' &&
+  grep -q 'SPDX-License-Identifier: MIT' a.sh && bash "$here/skills/openssf-badge/add-spdx.sh" "Test" MIT --check ) ||
+  { echo "add-spdx.sh didn't add headers cleanly"; fail=1; }
+rm -rf "$s"
+python3 -c "import ast,sys; ast.parse(open('skills/openssf-badge/csp-headers.py').read())" || { echo "csp-headers.py doesn't parse"; fail=1; }
 exit $fail
