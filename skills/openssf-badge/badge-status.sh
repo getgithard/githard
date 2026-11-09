@@ -17,7 +17,7 @@ case $current in in_progress) next=passing ;; passing) next=silver ;; *) next=go
 target=${2:-$next}
 case $target in passing) levels="passing" ;; silver) levels="passing silver" ;; gold) levels="passing silver gold" ;;
   *) echo "level must be passing, silver or gold"; exit 2 ;; esac
-jq -r '"project  \(.name): \((.badge_level // "in_progress") | sub("_"; " ")) now (\(.tiered_percentage // 0) of 300 on the tiered scale)"' <<<"$p"
+jq -r '"project  \(.name // .repo_url // "project"): \((.badge_level // "in_progress") | sub("_"; " ")) now (\(.tiered_percentage // 0) of 300 on the tiered scale)"' <<<"$p"
 echo "target   $target"
 
 blocking=0; out=""

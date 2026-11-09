@@ -23,7 +23,7 @@ The reasons behind every item are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md
 | Private vulnerability reporting | you | `gh api -X PUT repos/OWNER/REPO/private-vulnerability-reporting` |
 | Secret scanning and push protection | you | `gh api -X PATCH repos/OWNER/REPO --input -` with `{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}` |
 | Dependabot alerts | you | `gh api -X PUT repos/OWNER/REPO/vulnerability-alerts` |
-| Sign-off required on web commits | you | `gh api -X PATCH repos/OWNER/REPO -F web_commit_signoff_required=true` |
+| Sign-off required on web commits | you | `gh api -X PATCH repos/OWNER/REPO -F web_commit_signoff_required=true`. Skip it when the org already requires sign-off: GitHub then rejects the repo setting with a 422, and the org rule covers the repo anyway. Keep it out of any `PATCH` that sets other settings, so one rejection doesn't take them down too. |
 | Discussions | you | `gh repo edit OWNER/REPO --enable-discussions` |
 
 For a repo that doesn't exist yet, build its first commit in a local folder, then give the owner one command to create it and push:
