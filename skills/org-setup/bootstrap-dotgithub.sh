@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Create or update an org's public .github repo from a local folder. Safe to run again.
 # Usage: bash bootstrap-dotgithub.sh ORG DIR
+#   If main is protected, it pushes a branch and opens a PR instead.
 #   DIR holds the files: profile/README.md, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md,
 #   .github/ISSUE_TEMPLATE/..., and so on. The repo's main branch ends up matching DIR.
 # Meant for the org owner to run: creating an org's public repo needs an owner's rights.
@@ -19,5 +20,12 @@ rsync -a --delete --exclude .git "$dir/" "$work/"
 git -C "$work" add -A
 if git -C "$work" diff --cached --quiet; then echo "$org/.github already matches $dir"; exit 0; fi
 git -C "$work" commit -q -s -m "chore: update the org profile and default community files"
-git -C "$work" push -q -u origin HEAD:main
-echo "pushed to https://github.com/$org/.github"
+if git -C "$work" push -q origin HEAD:main 2>/dev/null; then
+  echo "pushed to https://github.com/$org/.github"
+else
+  # main is protected (as it should be once repo-setup has run), so propose the change instead.
+  branch="update-$(date +%Y%m%d-%H%M%S)"
+  git -C "$work" push -q origin "HEAD:$branch"
+  gh pr create -R "$org/.github" --head "$branch" --base main --title "chore: update the org profile and default community files" \
+    --body "Made by bootstrap-dotgithub.sh from a local folder."
+fi
