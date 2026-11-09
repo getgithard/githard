@@ -1,0 +1,20 @@
+# Plugins GitHard recommends without asking where they come from. Reviewed 2026-11-09.
+# Anything not listed here needs the owner's explicit yes, with who publishes it and what it runs.
+# plugin@marketplace	marketplace source (owner/repo, or "official")	publisher	runs	when
+superpowers@claude-plugins-official	official	Jesse Vincent (obra)	skills only	any project with code
+ponytail@ponytail	DietrichGebert/ponytail	Dietrich Gebert	skills and hooks	any project with code
+githard@githard	getgithard/githard	GitHard	skills, shell scripts that call gh	any project on GitHub
+context7@claude-plugins-official	official	Upstash	MCP server (remote docs lookup)	any project with dependencies
+typescript-lsp@claude-plugins-official	official	Anthropic	typescript-language-server	TypeScript or JavaScript
+pyright-lsp@claude-plugins-official	official	Anthropic	pyright-langserver	Python
+gopls-lsp@claude-plugins-official	official	Anthropic	gopls	Go
+rust-analyzer-lsp@claude-plugins-official	official	Anthropic	rust-analyzer	Rust
+ruby-lsp@claude-plugins-official	official	Anthropic	ruby-lsp	Ruby
+jdtls-lsp@claude-plugins-official	official	Anthropic	jdtls	Java
+clangd-lsp@claude-plugins-official	official	Anthropic	clangd	C or C++
+csharp-lsp@claude-plugins-official	official	Anthropic	csharp-ls	C#
+php-lsp@claude-plugins-official	official	Anthropic	intelephense	PHP
+swift-lsp@claude-plugins-official	official	Anthropic	sourcekit-lsp	Swift
+kotlin-lsp@claude-plugins-official	official	Anthropic	kotlin-lsp	Kotlin
+playwright@claude-plugins-official	official	Microsoft	MCP server (drives a browser)	a web UI to test
+frontend-design@claude-plugins-official	official	Anthropic	skills only	a web UI to design

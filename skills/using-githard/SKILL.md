@@ -32,6 +32,7 @@ It comes first even when something else is wrong, such as a missing repo or an e
 | A new or existing org: profile README, the `.github` repo, verified domain, pinned repos, member defaults | `org-setup` | built |
 | Getting the project seen: starter repos, Show and tell, giving back, measuring channels | `growth` | built |
 | A handoff file, remembering decisions, resuming where the last session stopped | `save-point` | built |
+| Which plugins, skills, MCP servers or language servers a project needs, or whether one is safe | `agent-toolkit` | built |
 | The OpenSSF Best Practices badge, passing, silver or gold, governance and assurance docs, per-file license headers, hardened site headers | `openssf-badge` | built |
 
 A request can span rows. Take them in the order the work happens: org, then repo, then issues, then people, then shipping.

@@ -90,4 +90,12 @@ s=$(mktemp -d); here=$PWD
   { echo "add-spdx.sh didn't add headers cleanly"; fail=1; }
 rm -rf "$s"
 python3 -c "import ast,sys; ast.parse(open('skills/openssf-badge/csp-headers.py').read())" || { echo "csp-headers.py doesn't parse"; fail=1; }
+# agent-toolkit: a TypeScript repo gets the TypeScript language server, and --apply writes only vetted plugins.
+s=$(mktemp -d); here=$PWD
+( cd "$s" && git init -q && echo '{}' > package.json && echo 'x' > a.ts && git add -A &&
+  bash "$here/skills/agent-toolkit/toolkit.sh" . --apply >/dev/null &&
+  jq -e '.enabledPlugins["typescript-lsp@claude-plugins-official"] == true' .claude/settings.json >/dev/null ) ||
+  { echo "toolkit.sh didn't set up a TypeScript repo"; fail=1; }
+rm -rf "$s"
+grep -v '^#' skills/agent-toolkit/vetted.tsv | awk -F'\t' 'NF != 5 {bad=1; print "vetted.tsv row has " NF " fields: " $1} END {exit bad}' || fail=1
 exit $fail

@@ -18,5 +18,6 @@ Built so far:
 - [`growth`](growth/SKILL.md): your own surfaces first, Show and tell only where it's alive, never spam on strangers' repos, giving back within each project's AI policy (`ai-policy-check.sh`), and measuring every channel (`traffic.sh`).
 - [`save-point`](save-point/SKILL.md): a running handoff file, decisions written where the next session reads them, and a fixed order for starting a session. `save-point.sh` drafts the facts from GitHub.
 - [`openssf-badge`](openssf-badge/SKILL.md): the OpenSSF Best Practices badge from setup to gold. `badge-status.sh` reads a project's real answers, `levels.md` maps every criterion, and there are templates for silver's documents plus `add-spdx.sh`, `csp-headers.py` and `check-headers.sh` for gold.
+- [`agent-toolkit`](agent-toolkit/SKILL.md): picks the Claude Code plugins, MCP servers and language servers a project needs, only from the official marketplace or a vetted list, and records them in the repo's `.claude/settings.json` so everyone gets the same tools.
 
 The rest of the planned skills, their order and what "done" means for each are in [`docs/design.md`](../docs/design.md) and [`docs/plan.md`](../docs/plan.md).
