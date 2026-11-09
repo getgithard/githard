@@ -10,5 +10,5 @@ r=$(curl -sf --max-time 20 "https://api.securityscorecards.dev/projects/github.c
   { echo "unknown  no published Scorecard for $repo yet. Add the Scorecard workflow and let it run once."; exit 2; }
 jq -r '"score    \(.score)/10, from commit \(.repo.commit[0:7]) on \(.date[0:10])"' <<<"$r"
 jq -r '.checks | sort_by(.score) | .[] | select(.score < 10) |
-  (if (.name | IN("Code-Review", "Contributors", "Maintained")) then "needs others" else "fixable" end) as $kind
+  (if .score < 0 then "not scored" elif (.name | IN("Code-Review", "Contributors", "Maintained")) then "needs others" else "fixable" end) as $kind
   | "\($kind | . + "        "[0:(13 - length)])\(.name): \(if .score < 0 then "n/a" else "\(.score)/10" end). \(.reason)"' <<<"$r"

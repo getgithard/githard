@@ -17,7 +17,7 @@ Copy `${CLAUDE_SKILL_DIR}/templates/.github/workflows/scorecard.yml` into the re
 bash ${CLAUDE_SKILL_DIR}/scorecard-check.sh OWNER/REPO
 ```
 
-It lists every check below 10, lowest first. Each one is either `fixable` or `needs others`. Exit 2 means there's no published result yet.
+It lists every check below 10, lowest first. Each one is `fixable`, `needs others`, or `not scored` (the check doesn't apply yet, such as Signed-Releases before the first release). Exit 2 means there's no published result yet.
 
 ## Be honest about what needs other people
 
@@ -27,6 +27,11 @@ Three checks can't be fixed with settings, and you never fake them:
 - **Contributors** wants contributors from several organizations. That comes from real outside contributions over time.
 - **Maintained** wants 90 days of activity. A new repo simply has to wait.
 
+Two more have limits a small project can't honestly get past:
+
+- **Branch-Protection** gives its top points only for required approving reviews and code-owner review. With one maintainer, that means a second person again. Turn on everything else, and report the rest as needing a second maintainer.
+- **Fuzzing** only counts fuzzers for languages that have them. A repo of shell scripts and Markdown has nothing to fuzz. Say so, rather than adding a fuzzer to satisfy the check.
+
 Say this plainly in the report, and don't call a score "perfect" while any of them is below 10.
 
 ## The rest
@@ -34,6 +39,7 @@ Say this plainly in the report, and don't call a score "perfect" while any of th
 | Item | Who | How |
 |---|---|---|
 | Secret scanning and push protection | you | `gh api -X PATCH repos/OWNER/REPO --input -` with `{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}` |
+| Static analysis (Scorecard's SAST check) | you | Copy `${CLAUDE_SKILL_DIR}/templates/.github/workflows/codeql.yml` and add the project's languages to its matrix. `actions` analyzes the workflows themselves. |
 | Workflow tokens read-only by default | you | `permissions: read-all` or `contents: read` at the top of every workflow, widened per job only where needed |
 | Signed releases | you | Build attestations in the release workflow. See `releases`. |
 | OpenSSF Best Practices badge | **owner** | Sign in at https://www.bestpractices.dev with GitHub, then **Get Your Badge Now**. You can prepare an answer for every question from what the repo already has, but the owner submits it. |
