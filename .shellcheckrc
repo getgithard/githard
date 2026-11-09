@@ -1,0 +1,5 @@
+# shellcheck runs at its strictest default level in CI. Only these checks are off, each on purpose:
+# SC2016: jq, awk and grep programs live in single quotes so the shell leaves their $ alone.
+# SC2015: "a && report ok || report missing" is safe here, because report() and fail() always return 0 or exit.
+# SC2001: sed handles multi-line input, and ${var//x/y} doesn't.
+disable=SC2016,SC2015,SC2001

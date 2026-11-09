@@ -31,7 +31,7 @@ for level in $levels; do
       [ "$status" = "?" ] && kind="answer" || kind="unmet"
       out+="$kind	$level	$crit$tag"$'\n'; blocking=1
     else
-      out+="$(tr A-Z a-z <<<"$req")	$level	$crit$tag"$'\n'
+      out+="$(tr '[:upper:]' '[:lower:]' <<<"$req")	$level	$crit$tag"$'\n'
     fi
   done < <(grep -v '^#' "$here/criteria.tsv")
 done

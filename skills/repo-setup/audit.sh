@@ -24,7 +24,8 @@ check_file "CODEOWNERS" CODEOWNERS .github/CODEOWNERS docs/CODEOWNERS
 check_file "PR template" .github/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md PULL_REQUEST_TEMPLATE.md
 check_file "issue templates" .github/ISSUE_TEMPLATE/*.yml .github/ISSUE_TEMPLATE/*.md
 
-dep=$(ls .github/dependabot.yml .github/dependabot.yaml 2>/dev/null | head -1)
+dep=""
+for f in .github/dependabot.yml .github/dependabot.yaml; do [ -f "$f" ] && { dep=$f; break; }; done
 if [ -z "$dep" ]; then report missing "Dependabot config"
 else
   grep -q 'package-ecosystem: *"\{0,1\}github-actions' "$dep" && report ok "Dependabot watches GitHub Actions" || report missing "Dependabot watches GitHub Actions"
@@ -33,15 +34,16 @@ else
   grep -q '^ *groups:' "$dep" && report ok "Dependabot groups updates" || report missing "Dependabot groups updates"
 fi
 
-wf=$(ls .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null)
-if [ -z "$wf" ]; then report missing "CI workflow"
+wf=()
+for f in .github/workflows/*.yml .github/workflows/*.yaml; do [ -f "$f" ] && wf+=("$f"); done
+if [ ${#wf[@]} -eq 0 ]; then report missing "CI workflow"
 else
   report ok "CI workflow"
   # Local actions (./) and docker:// images aren't pinned by commit SHA, so skip them.
-  unpinned=$(grep -hE '^[[:space:]]*-?[[:space:]]*uses:' $wf | grep -vE '@[0-9a-f]{40}([[:space:]]|$)' | grep -vE 'uses:[[:space:]]*["'\'']?(\./|docker://)' | sed -E 's/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*//' | sort -u)
+  unpinned=$(grep -hE '^[[:space:]]*-?[[:space:]]*uses:' "${wf[@]}" | grep -vE '@[0-9a-f]{40}([[:space:]]|$)' | grep -vE 'uses:[[:space:]]*["'\'']?(\./|docker://)' | sed -E 's/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*//' | sort -u)
   if [ -z "$unpinned" ]; then report ok "Actions pinned to full commit SHAs"
-  else report missing "Actions pinned to full commit SHAs: $(echo $unpinned)"; fi
-  grep -qiE 'signed-off-by|dco' $wf && report ok "DCO sign-off check in CI" || report missing "DCO sign-off check in CI"
+  else report missing "Actions pinned to full commit SHAs: $(tr '\n' ' ' <<<"$unpinned" | sed 's/ $//')"; fi
+  grep -qiE 'signed-off-by|dco' "${wf[@]}" && report ok "DCO sign-off check in CI" || report missing "DCO sign-off check in CI"
 fi
 
 repo=${1:-}

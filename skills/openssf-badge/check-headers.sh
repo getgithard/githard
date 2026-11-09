@@ -26,10 +26,10 @@ for url in "$@"; do
   fi
   hsts=$(get strict-transport-security); age=$(grep -oiE 'max-age=[0-9]+' <<<"$hsts" | cut -d= -f2)
   [ "${age:-0}" -ge 15552000 ] || fail "Strict-Transport-Security max-age of at least 180 days (got: ${hsts:-none})"
-  [ "$(get x-content-type-options | tr A-Z a-z)" = nosniff ] || fail "X-Content-Type-Options: nosniff"
-  xfo=$(get x-frame-options | tr a-z A-Z)
+  [ "$(get x-content-type-options | tr '[:upper:]' '[:lower:]')" = nosniff ] || fail "X-Content-Type-Options: nosniff"
+  xfo=$(get x-frame-options | tr '[:lower:]' '[:upper:]')
   [[ $xfo == DENY || $xfo == SAMEORIGIN ]] || grep -qi 'frame-ancestors' <<<"$csp" || fail "X-Frame-Options DENY or CSP frame-ancestors"
-  rp=$(get referrer-policy | tr A-Z a-z)
+  rp=$(get referrer-policy | tr '[:upper:]' '[:lower:]')
   { [ -n "$rp" ] && [[ $rp != *unsafe-url* ]]; } || echo "note     $url  Referrer-Policy: consider strict-origin-when-cross-origin (got: ${rp:-none})"
 done
 [ $status = 0 ] && echo "ok       every URL sends hardened headers"

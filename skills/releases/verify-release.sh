@@ -19,7 +19,8 @@ fail() { echo "FAIL  $*"; exit 1; }
 sums=$(gh release view "$tag" -R "$repo" --json assets --jq '.assets[].name' | grep -E '^SHA256SUMS$|checksums\.txt$' | head -1)
 [ -n "$sums" ] || fail "no SHA256SUMS or *checksums.txt in $tag"
 gh release download "$tag" -R "$repo" -D "$dir" -p "$sums" -p "${pattern:-*}" || fail "couldn't download the assets of $tag"
-[ "$(ls "$dir" | grep -vxF "$sums" | wc -l)" -gt 0 ] || fail "no assets matched${pattern:+ --pattern $pattern}, so there's nothing to check"
+assets=0; for f in "$dir"/*; do [ "${f##*/}" = "$sums" ] || assets=$((assets + 1)); done
+[ $assets -gt 0 ] || fail "no assets matched${pattern:+ --pattern $pattern}, so there's nothing to check"
 # --ignore-missing: with --pattern, only some of the listed files are here.
 (cd "$dir" && { command -v sha256sum >/dev/null && sha256sum --ignore-missing -c "$sums" || shasum -a 256 --ignore-missing -c "$sums"; }) >/dev/null ||
   fail "a checksum doesn't match $sums"

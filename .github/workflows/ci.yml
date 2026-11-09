@@ -13,6 +13,8 @@ jobs:
         with:
           persist-credentials: false
       - run: scripts/check.sh
+      - name: shellcheck, at its strictest default level (see .shellcheckrc)
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck
   dco:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

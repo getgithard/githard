@@ -24,6 +24,12 @@ AI-assisted contributions are welcome. You're responsible for every line you sub
 
 If a PR has had no activity for 30 days, a maintainer checks in. At 60 days we either close it or finish it ourselves and credit you. There's no stale bot.
 
+## Coding standards
+
+- **Shell scripts** follow [shellcheck](https://www.shellcheck.net), which CI runs on every PR at its strictest default level. The few checks turned off are in `.shellcheckrc`, each with its reason.
+- **Skills and docs** follow the house voice in [`knowledge/voice.md`](knowledge/voice.md).
+- **Workflows** pin every Action to a full commit SHA, and grant write permissions per job, never at the top level.
+
 ## Code review
 
 Every change reaches `main` through a pull request, and its checks must pass. A reviewer checks that the change:

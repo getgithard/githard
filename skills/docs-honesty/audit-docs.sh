@@ -12,14 +12,15 @@ shift; tool=""; help_cmd=""; links=1
 while [ $# -gt 0 ]; do
   case $1 in --tool) tool=$2; shift 2 ;; --help-cmd) help_cmd=$2; shift 2 ;; --no-links) links=0; shift ;; *) echo "unknown option $1"; exit 2 ;; esac
 done
-files=$(grep -rlE . "$docs" --include='*.md' --include='*.mdx' 2>/dev/null; [ -f "$docs" ] && echo "$docs")
-[ -n "$files" ] || { echo "no Markdown found in $docs"; exit 2; }
+files=()
+while IFS= read -r f; do [ -n "$f" ] && files+=("$f"); done < <(grep -rlE . "$docs" --include='*.md' --include='*.mdx' 2>/dev/null; [ -f "$docs" ] && echo "$docs")
+[ ${#files[@]} -gt 0 ] || { echo "no Markdown found in $docs"; exit 2; }
 status=0
 
 if [ $links = 1 ]; then
   # Links in prose only: URLs inside code blocks and `inline code` are examples, not links.
   found=$(awk 'FNR==1{fence=0} /^```/{fence=!fence; next} !fence { gsub(/`[^`]*`/, ""); if (match($0, /https?:\/\/[^] )"'"'"'<>`]+/)) { line=$0
-      while (match(line, /https?:\/\/[^] )"'"'"'<>`]+/)) { print FILENAME":"FNR":"substr(line, RSTART, RLENGTH); line=substr(line, RSTART+RLENGTH) } } }' $files | sed -E 's/[.,;:]+$//' | sort -t: -k3 -u |
+      while (match(line, /https?:\/\/[^] )"'"'"'<>`]+/)) { print FILENAME":"FNR":"substr(line, RSTART, RLENGTH); line=substr(line, RSTART+RLENGTH) } } }' "${files[@]}" | sed -E 's/[.,;:]+$//' | sort -t: -k3 -u |
   while IFS= read -r hit; do
     where=${hit%%:http*}; url=${hit#"$where":}
     code=$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
@@ -35,7 +36,7 @@ if [ -n "$tool" ] && [ -n "$help_cmd" ]; then
   help=$(bash -c "$help_cmd" 2>&1) || { echo "unknown  --help-cmd failed: $help_cmd"; exit 2; }
   # Lines inside fenced code blocks that run the tool, with their file and line number.
   runs=$(awk -v t="$tool" 'FNR==1{fence=0} /^```/{fence=!fence; next}
-    fence { line=$0; sub(/^[$>] */,"",line); if (index(line, t" ")==1) print FILENAME":"FNR":"line }' $files)
+    fence { line=$0; sub(/^[$>] */,"",line); if (index(line, t" ")==1) print FILENAME":"FNR":"line }' "${files[@]}")
   while IFS= read -r hit; do
     [ -n "$hit" ] || continue
     where=$(cut -d: -f1,2 <<<"$hit"); cmd=$(cut -d: -f3- <<<"$hit")
@@ -43,9 +44,10 @@ if [ -n "$tool" ] && [ -n "$help_cmd" ]; then
     if [ -n "$sub" ] && [[ $sub != -* ]] && ! grep -qwF -- "$sub" <<<"$help"; then
       echo "untrue   $where  \`$tool $sub\` isn't in the help text"; status=1
     fi
-    for flag in $(grep -oE -- '--[a-z][a-z0-9-]*' <<<"$cmd" | sort -u); do
+    while IFS= read -r flag; do
+      [ -n "$flag" ] || continue
       grep -qF -- "$flag" <<<"$help" || { echo "untrue   $where  \`$flag\` isn't in the help text"; status=1; }
-    done
+    done < <(grep -oE -- '--[a-z][a-z0-9-]*' <<<"$cmd" | sort -u)
   done <<<"$runs"
 fi
 exit $status
