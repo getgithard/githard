@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Find claims in docs that aren't true of the released version.
 # Usage: bash audit-docs.sh DOCS_PATH [--tool NAME --help-cmd "CMD"] [--no-links]
-#   Links: every http(s) URL in DOCS_PATH must answer below 400. A URL that doesn't answer at all
-#          is "unknown", not dead.
+#   Links: every http(s) URL in DOCS_PATH must answer below 400. A URL that doesn't answer at all,
+#          or refuses automated checks (401, 403, 429), is "unknown", not dead.
 #   Flags: with --tool and --help-cmd, each `NAME subcommand` and `--flag` in a code block must
 #          appear in the help text CMD prints. Run CMD against the released build, not main.
 # Prints one line per untrue claim as path:line. Exits 1 if it found any.
@@ -26,7 +26,12 @@ if [ $links = 1 ]; then
     code=$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
     # Some servers refuse HEAD; ask again with GET before calling a link dead.
     [ "$code" -ge 400 ] 2>/dev/null && code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
-    case $code in (000) echo "unknown  $where  $url (no answer)" ;; ([45]??) echo "dead     $where  $url ($code)" ;; esac
+    # 401, 403 and 429 mean the site refused an automated check, not that the page is gone.
+    case $code in
+      (000) echo "unknown  $where  $url (no answer)" ;;
+      (401|403|429) echo "unknown  $where  $url ($code: refused an automated check, so open it in a browser)" ;;
+      ([45]??) echo "dead     $where  $url ($code)" ;;
+    esac
   done)
   [ -n "$found" ] && echo "$found"
   grep -q '^dead' <<<"$found" && status=1
