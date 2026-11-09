@@ -72,3 +72,21 @@ Gotchas:
 - When a skill ships, retarget the `planned-*` eval that names it (see `evals/README.md`).
 
 Next: #9 (`releases`).
+
+## 2026-11-09 01:30 UTC: every planned skill is built
+
+Done: M3 and M4 are closed. That's #9 `releases` (#39), #10 `docs-honesty` and the `docs-auditor` agent (#40), #11 `org-setup` (#41, with the bootstrap fix in #42), #12 `security-baseline` (#43, with the Scorecard follow-up in #45), #13 `growth` (#44), and #14 `save-point` (#46). Plus `audit-docs.sh` ignoring example URLs in code (#47). All 13 skills pass their evals with the plugin, 42 cases in all. The site lists every drill, Tank sits on the section edge, and in-page links scroll smoothly.
+
+Org: `getgithard/.github` exists, made with `bootstrap-dotgithub.sh`, and passes the repo audit. githard.dev is verified, hello@githard.dev is the public email, 2FA is required, and both repos are pinned. GitHard's first Scorecard was 6.3/10. CodeQL (actions) has been added since. Secret scanning and push protection are on for all three repos.
+
+Next: M5. #15 dogfood needs a brand-new org from James. Then #16 (README before and after), #17 (first release, `claude plugin tag`), and #18 (launch).
+
+Waiting on James:
+- `gh api -X PATCH orgs/getgithard -f description=... -F web_commit_signoff_required=true`. The org audit still shows both missing.
+- Submitting the OpenSSF Best Practices badge at bestpractices.dev.
+
+Gotchas:
+- When a skill ships, retarget or remove its `planned-*` eval and its topics in `using-githard`'s description. None are planned now.
+- Grader regexes are JavaScript. Use `flags: i`, never inline `(?i)`.
+- Auto mode blocks org-setting changes and running downloaded binaries. Hand those to James.
+- `githard-site` stays public on purpose: a free org can't enforce rulesets on private repos.
