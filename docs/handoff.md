@@ -90,3 +90,23 @@ Gotchas:
 - Grader regexes are JavaScript. Use `flags: i`, never inline `(?i)`.
 - Auto mode blocks org-setting changes and running downloaded binaries. Hand those to James.
 - `githard-site` stays public on purpose: a free org can't enforce rulesets on private repos.
+
+## 2026-11-09 03:40 UTC: keyparity v0.1.0 shipped with GitHard
+
+Done since the last section:
+- New skills: `openssf-badge` (#54) and `agent-toolkit` (#56). GitHard holds the OpenSSF Best Practices passing badge (project 16471). The path to gold is #59.
+- githard.dev and docs.githard.dev send hardened headers (githard-site#6). The Pages projects are `githard-site` and `githard-docs`, not `githard`.
+- Dogfood (#15): keyparity/keyparity, a Bun CLI, went from an empty org to a published v0.1.0 using GitHard's skills, with 40 tests and attested binaries. Six GitHard gaps were found and fixed (#60, #61, #63).
+
+Next:
+1. npm publishing for keyparity (James's npm account).
+2. keyparity's org steps (2FA, `.github` repo, pins) and its OpenSSF badge.
+3. GitHard silver (#59): GOVERNANCE, ROADMAP, ARCHITECTURE, SECURITY-MODEL, shellcheck, coverage.
+4. M5: #16 (README before and after, now possible with keyparity), #17 (release githard--v0.1.0), #18 (launch).
+
+Waiting on James: npm for keyparity. A second owner for getgithard (silver `access_continuity`).
+
+Gotchas:
+- Auto mode blocks creating public repos, org PATCH calls, and writing `.claude/` in the working repo. Use `bootstrap-repo.sh` and `bootstrap-dotgithub.sh`, and hand over the commands. James may add `/permissions` rules for his two orgs.
+- James's global gitignore excludes `**/.claude/` and `CLAUDE.md`. Shared `.claude/settings.json` needs `git add -f`.
+- Cloudflare caps a header line at about 2,000 characters. The docs CSP is 1,838, and `csp-headers.py` fails the build past 2,000.
