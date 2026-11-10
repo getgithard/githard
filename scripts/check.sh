@@ -130,7 +130,12 @@ rm -rf "$s"
 gate=skills/on-duty/gate.sh; s=$(mktemp -d)
 cfgkv() { # mode chat count risky first -> CFG file path
   printf 'mode=%s\nchat=%s\napprove_first_count=%s\nidentity=bot\nrisky_paths_need_human=%s\nwait_for_checks=\napprovers=\nmonthly_cap_usd=25\nfirst_timer_runs_per_day=%s\nrelease_after_days=7\n' "$1" "$2" "$3" "$4" "$5" > "$s/cfg"; echo "$s/cfg"; }
-gcase() { local want=$1 label=$2; shift 2; local got; got=$(bash $gate "$@" 2>&1 || true); [[ $got == "$want"* ]] || { echo "gate.sh $label: wanted '$want', got '$got'"; fail=1; }; }
+gcase() { # exact match for go/run; "queue <reason>"/"skip <reason>" otherwise; exit code must be 0
+  local want=$1 label=$2 got rc=0; shift 2; got=$(bash $gate "$@" 2>&1) || rc=$?
+  [ $rc = 0 ] || { echo "gate.sh $label: exit $rc"; fail=1; return; }
+  if [ "$want" = go ] || [ "$want" = run ]; then [ "$got" = "$want" ]; else [[ $got == "$want" || $got == "$want "* ]]; fi ||
+    { echo "gate.sh $label: wanted '$want', got '$got'"; fail=1; }
+}
 safe=$(cfgkv safe approve-first 5 true none); cp "$safe" "$s/safe"
 auto=$(cfgkv auto approve-first 5 true none); cp "$auto" "$s/auto"
 cfgkv safe auto 5 true none >/dev/null; cp "$s/cfg" "$s/safe-chat-auto"
@@ -154,6 +159,11 @@ gcase queue "merge workflow in auto" decide "$s/auto" merge --paths "$s/p-ci" --
 gcase queue "merge lockfile among others" decide "$s/auto" merge --paths "$s/p-mixed" --review-required false
 gcase go "merge workflow, risky off" decide "$s/auto-norisk" merge --paths "$s/p-ci" --review-required false
 gcase queue "merge review required" decide "$s/auto" merge --paths "$s/p-src" --review-required true
+: > "$s/p-empty"; printf 'foo.gemspec\n' > "$s/p-gem"; printf 'lib/setup.py\n' > "$s/p-setup"
+gcase queue "merge empty paths" decide "$s/auto" merge --paths "$s/p-empty" --review-required false
+gcase queue "merge gemspec" decide "$s/auto" merge --paths "$s/p-gem" --review-required false
+gcase queue "merge setup.py" decide "$s/auto" merge --paths "$s/p-setup" --review-required false
+for f in GNUmakefile makefile Containerfile; do printf 'x/%s\n' $f > "$s/p-$f"; gcase queue "merge $f" decide "$s/auto" merge --paths "$s/p-$f" --review-required false; done
 gcase queue "merge without paths" decide "$s/auto" merge --review-required false
 gcase queue "merge without review flag" decide "$s/auto" merge --paths "$s/p-src"
 gcase queue "release breaking" decide "$s/auto" release --breaking true
@@ -173,6 +183,9 @@ gcase skip "first timer at limit" should-run "$s/limit2" --assoc FIRST_TIME_CONT
 gcase skip "NONE at limit" should-run "$s/limit2" --assoc NONE --body-file "$s/b-plain" --runs-today 3
 gcase run "first timer under limit" should-run "$s/limit2" --assoc FIRST_TIMER --body-file "$s/b-plain" --runs-today 1
 gcase run "MEMBER at limit" should-run "$s/limit2" --assoc MEMBER --body-file "$s/b-plain" --runs-today 9
+gcase skip "no assoc at limit" should-run "$s/limit2" --body-file "$s/b-plain" --runs-today 50
+gcase skip "MANNEQUIN at limit" should-run "$s/limit2" --assoc MANNEQUIN --body-file "$s/b-plain" --runs-today 2
+gcase run "CONTRIBUTOR at limit" should-run "$s/limit2" --assoc CONTRIBUTOR --body-file "$s/b-plain" --runs-today 9
 gcase run "limit none" should-run "$s/safe" --assoc NONE --body-file "$s/b-plain" --runs-today 99
 gcase skip "should-run missing CFG" should-run "$s/nope" --assoc MEMBER --body-file "$s/b-plain" --runs-today 0
 gcase skip "should-run missing body" should-run "$s/safe" --assoc MEMBER --body-file "$s/nobody" --runs-today 0

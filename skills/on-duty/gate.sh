@@ -7,7 +7,7 @@
 # Exit 2 on a bad command line. Anything missing, garbled or unknown queues or skips, never goes.
 set -uo pipefail
 
-RISKY='^\.github/|(^|/)(Makefile|Dockerfile|justfile|build\.[a-z]+|release[^/]*\.(sh|ya?ml))$|^scripts/|(^|/)(package(-lock)?\.json|bun\.lockb?|yarn\.lock|pnpm-lock\.yaml|go\.(mod|sum)|Cargo\.(toml|lock)|requirements[^/]*\.txt|pyproject\.toml|poetry\.lock|uv\.lock|Gemfile(\.lock)?|composer\.(json|lock))$'
+RISKY='^\.github/|(^|/)(Makefile|GNUmakefile|makefile|Dockerfile|Containerfile|justfile|setup\.py|[^/]*\.gemspec|build\.[a-z]+|release[^/]*\.(sh|ya?ml))$|^scripts/|(^|/)(package(-lock)?\.json|bun\.lockb?|yarn\.lock|pnpm-lock\.yaml|go\.(mod|sum)|Cargo\.(toml|lock)|requirements[^/]*\.txt|pyproject\.toml|poetry\.lock|uv\.lock|Gemfile(\.lock)?|composer\.(json|lock))$'
 
 sub=${1:-}; cfg=${2:-}
 [ $# -ge 2 ] || { echo "usage: gate.sh decide|should-run CFG ..." >&2; exit 2; }
@@ -47,7 +47,7 @@ if [ "$sub" = decide ]; then
       [[ $review =~ ^(true|false)$ ]] || no "review state unknown"
       [ "$review" = false ] || no "review required"
       if [ "$risky" = true ]; then
-        [ -f "$paths" ] || no "changed files unknown"
+        [ -s "$paths" ] || no "changed files unknown"
         grep -Eq "$RISKY" "$paths" && no "touches risky paths"
       fi
       by_mode ;;
@@ -74,7 +74,8 @@ limit=$(get first_timer_runs_per_day)
 if [[ $limit =~ ^[0-9]+$ ]]; then
   [[ $runs =~ ^[0-9]+$ ]] || no "runs today unknown"
   case $assoc in
-    FIRST_TIME_CONTRIBUTOR|FIRST_TIMER|NONE) [ "$runs" -lt "$limit" ] || no "first-timer daily limit reached" ;;
+    OWNER|MEMBER|COLLABORATOR|CONTRIBUTOR) ;;
+    *) [ "$runs" -lt "$limit" ] || no "first-timer daily limit reached" ;; # unknown or empty counts as a stranger
   esac
 fi
 echo run
