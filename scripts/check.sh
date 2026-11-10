@@ -222,6 +222,7 @@ nvcase "breaking v1.0.0" v0.1.2 $'fix: a\n* feat!: b'
 nvcase "breaking v1.0.0" v0.1.2 $'fix: a\n- feat!: b'
 nvcase v0.2.0 v0.1.2 $'* feat: b'
 rc=0; printf 'fix: a\n' | bash $nv v01.2.3 >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "next-version.sh accepted a leading-zero tag"; fail=1; }
-rc=0; seq 1 200000 | sed 's/^/fix: /' | bash $nv v1.2.3 >/dev/null 2>&1 || rc=$?; [ $rc = 0 ] || { echo "next-version.sh exit $rc on a long pipe"; fail=1; }
+rc=0; got=$(set -o pipefail; (echo 'feat!: x'; seq 1 8000 | sed 's/^/fix: /') | bash "$nv" v1.2.3 2>/dev/null) || rc=$?
+{ [ "$got" = "breaking v2.0.0" ] && [ $rc = 0 ]; } || { echo "next-version.sh on a long pipe: got '$got', exit $rc"; fail=1; }
 rm -rf "$s"
 exit $fail
