@@ -21,7 +21,7 @@ bash ${CLAUDE_SKILL_DIR}/merge-when-green.sh OWNER/REPO <PR> [--method squash] [
 - If a required check fails, it reads the failed job's log. When every failure looks like a download flake (a 5xx, a timeout, a reset, DNS), it reruns only the failed jobs, at most twice. Anything else is a real failure: it stops and says which check.
 - An empty or failed answer from GitHub means "unknown, ask again", never "done".
 
-Exit 0 means merged. Exit 1 means a real failure or a timeout. Exit 2 means it refused (a fork PR, or a head that moved off `--head`) or couldn't read the PR or the ruleset.
+Exit 0 means merged. Exit 1 means a real failure or a timeout. Exit 2 means it refused (a fork PR without `--allow-fork`, or a head that moved off `--head`) or couldn't read the PR or the ruleset.
 
 ## Several PRs
 
@@ -33,7 +33,7 @@ One runner, one PR at a time, in the order you give. Never start several merge l
 
 ## Never
 
-- **Never run a merge script on a PR from a fork.** The script refuses. Review it with `fork-pr-safety`, then merge it by hand.
+- **Never run a merge script on a PR from a fork yourself.** The script refuses one. Review it with `fork-pr-safety`, then merge it by hand. The one exception is `--allow-fork`, and only `on-duty` passes it: by then its gate has pinned the head commit that was reviewed and checked the changed files and the ruleset's review rule.
 - **Never edit a script while it's running.** Bash reads a script as it runs, so the edit corrupts the run. Both scripts copy themselves to a temp file before they start, so editing the originals is safe.
 - **Never require branches to be up to date in the ruleset.** Each merge would restart CI on every other open PR. `repo-setup`'s ruleset leaves it off.
 

@@ -86,6 +86,9 @@ add() {
   num=$(gh api --paginate "repos/$repo/issues?state=open&labels=githard&per_page=100" --jq ".[] | select(.pull_request == null
     and .title == \"$TITLE\" and (.user.login|ascii_downcase) == \"$(lc "$me")\") | .number" | sort -n | head -1) || return 2
   if [ -z "$num" ]; then
+    # the queue is found by this label, and gh issue create fails on a label the repo hasn't got
+    gh label create githard -R "$repo" --force --color 5319e7 --description "Cards from GitHard on duty" >/dev/null 2>&1 ||
+      { echo "queue.sh: couldn't create the githard label" >&2; return 2; }
     num=$(gh issue create -R "$repo" --title "$TITLE" --label githard \
       --body "Everything GitHard wants to do waits here. Give a card a thumbs up, or reply /approve and its ID. $MARK" | grep -o '[0-9]*$') || return 2
     gh issue pin "$num" -R "$repo" >/dev/null 2>&1 || echo "queue.sh: could not pin issue #$num" >&2

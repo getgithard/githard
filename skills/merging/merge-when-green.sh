@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Merge one PR once every check its branch's ruleset requires has passed on the PR's current head.
-# Usage: bash merge-when-green.sh OWNER/REPO PR [--method squash|merge|rebase] [--timeout-min 60] [--require NAME]... [--head SHA]
+# Usage: bash merge-when-green.sh OWNER/REPO PR [--method squash|merge|rebase] [--timeout-min 60] [--require NAME]... [--head SHA] [--allow-fork]
 #        bash merge-when-green.sh --classify < failed-job.log
 # --require adds a check to the ruleset's required ones. --head refuses to merge any other head commit.
+# A PR from a fork is refused unless --allow-fork. Only on-duty's act.sh passes it, after its gate.
 # Reruns failed jobs only when every failure looks like a download flake (a 5xx, a timeout, a reset),
 # at most twice. Anything else is a real failure: it stops and says so.
 # Exit: 0 merged, 1 real failure or timeout, 2 refused or GitHub didn't answer.
@@ -18,8 +19,9 @@ if [ "${1:-}" = --classify ]; then grep -qiE "$FLAKE" && echo flake || echo real
 repo=${1:?usage: bash merge-when-green.sh OWNER/REPO PR [--method squash] [--timeout-min 60]}
 pr=${2:?usage: bash merge-when-green.sh OWNER/REPO PR [--method squash] [--timeout-min 60]}
 shift 2
-method=squash; timeout_min=60; extra=""; want_head=""
+method=squash; timeout_min=60; extra=""; want_head=""; allow_fork=""
 while [ $# -gt 0 ]; do
+  [ "$1" = --allow-fork ] && { allow_fork=1; shift; continue; }
   [ $# -ge 2 ] || { echo "option $1 has no value"; exit 2; }
   case $1 in
     --method) method=$2 ;; --timeout-min) timeout_min=$2 ;; --head) want_head=$2 ;;
@@ -42,7 +44,7 @@ mind_the_limit() {
 }
 
 pull=$(gh api "repos/$repo/pulls/$pr" 2>/dev/null) || { say "unknown: couldn't read the PR"; exit 2; }
-if [ "$(jq -r .head.repo.full_name <<<"$pull")" != "$repo" ]; then
+if [ -z "$allow_fork" ] && [ "$(jq -r .head.repo.full_name <<<"$pull")" != "$repo" ]; then
   say "comes from a fork. Merge it by hand after review: scripts never touch a contributor's PR."; exit 2
 fi
 base=$(jq -r .base.ref <<<"$pull")

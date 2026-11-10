@@ -109,7 +109,7 @@ Write one JSON object, `{"actions": [...]}`, with at most 20 entries. If nothing
 | `react` | `comment_id` (the number at the end of a comment's `#issuecomment-` URL), `content`: `+1`, `rocket`, `eyes`, `hooray` or `heart` | Reacts to a comment |
 | `assign` | `target`, `login` | Assigns someone |
 | `label` | `target`, `labels`: a list of labels that already exist | Adds labels |
-| `merge` | `target` (PR number) | Merges once the required checks pass on the head commit |
+| `merge` | `target` (PR number) | Merges once the required checks pass on the head commit. A PR from a fork goes through the same gate as any other |
 | `approve-runs` | `target` (fork PR number) | Approves the waiting CI runs on the head commit |
 | `release` | none | Starts a draft release. The version comes from the commits, not from you |
 | `publish` | `tag`, like `v1.4.0` or `name--v1.4.0` | Publishes a draft release after `verify-release.sh` passes |

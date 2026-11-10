@@ -334,6 +334,9 @@ acase() { # want-prefix want-exit label cfg action-json [flags]
 acase "queued reply 18" 0 "reply in safe, chat=approve" safe '{"kind":"reply","target":18,"body":"hi","why":"w"}'
 acase "queued merge 31" 0 "auto merge touching a workflow" auto '{"kind":"merge","target":31,"why":"w"}' --review-required false
 acase "done merge 32" 0 "auto merge of plain source" auto '{"kind":"merge","target":32,"why":"w"}' --review-required false
+# act.sh can't tell a fork PR from any other, so every gated merge says --allow-fork
+grep -q 'merging/merge-when-green.sh o/r 32 --head bbb222 --allow-fork ' "$ad/ran.txt" 2>/dev/null ||
+  { echo "act.sh: an auto merge doesn't pass --allow-fork, so a fork PR can't merge: $(cat "$ad/ran.txt" 2>/dev/null)"; fail=1; }
 acase "queued merge 32" 0 "auto merge, review state unknown" auto '{"kind":"merge","target":32,"why":"w"}'
 acase "refused merge 40" 1 "merge with no known head" auto '{"kind":"merge","target":40,"why":"w"}' --review-required false
 acase "refused reply 12__rm_-rf__" 1 "target injection" auto '{"kind":"reply","target":"12; rm -rf /","body":"hi","why":"w"}'
@@ -413,11 +416,13 @@ rm -rf "$g" "$ad"
 ud=$(mktemp -d); mkdir "$ud/bin"
 cat > "$ud/bin/gh" <<'GH'
 #!/usr/bin/env bash
-# "api [--paginate] PATH" answers from <PATH>.json and "pr list" from pr_list.json, with any --jq applied
-if [ "$1" = api ]; then shift; [ "$1" = --paginate ] && shift; key=$1; else key="$1 $2"; fi
+# "api [-X M] [--paginate [--slurp]] PATH" answers from <PATH>.json and "pr list" from pr_list.json,
+# with any --jq applied. A fixture holding several arrays stands for several pages. Every call is logged.
+printf '%s\n' "$*" >> "$GH_FIXTURES/calls"
+s=""; if [ "$1" = api ]; then shift; [ "$1" = -X ] && shift 2; [ "$1" = --paginate ] && shift; [ "$1" = --slurp ] && { s=1; shift; }; key=$1; else key="$1 $2"; fi
 f=$GH_FIXTURES/$(printf '%s' "$key" | tr -c 'A-Za-z0-9' _).json; [ -f "$f" ] || exit 1
 q=.; while [ $# -gt 0 ]; do [ "$1" = --jq ] && q=$2; shift; done
-jq -r "$q" "$f"
+if [ -n "$s" ]; then jq -s . "$f"; else jq -r "$q" "$f"; fi
 GH
 chmod +x "$ud/bin/gh"
 fx() { printf '%s' "$2" > "$ud/$(printf '%s' "$1" | tr -c 'A-Za-z0-9' _).json"; }
@@ -460,6 +465,26 @@ s1=$(bash skills/on-duty/pending.sh --sig "$ud/s1" 2>/dev/null || true); s2=$(ba
 s3=$(bash skills/on-duty/pending.sh --sig "$ud/s1" "$ud/s4" 2>/dev/null || true)
 { [[ $s1 =~ ^[0-9a-f]{12}$ ]] && [ "$s1" = "$s2" ] && [ "$s1" != "$s3" ]; } || { echo "pending.sh --sig: got '$s1' '$s2' '$s3'"; fail=1; }
 rm -f "$ud/pr_list.json"; pend 2 "" "when GitHub doesn't answer"
+stub() { GH_FIXTURES=$ud PATH="$ud/bin:$PATH" "$@"; }
+# queue.sh add makes the githard label before the issue that needs it, and stops if it can't
+printf 'card\n' > "$ud/card"; fx user '{"login":"bot1"}'; fx 'repos/o/r/issues?state=open&labels=githard&per_page=100' '[]'
+fx 'issue create' '"https://github.com/o/r/issues/12"'; fx 'repos/o/r/issues/12/comments' '[]'; fx 'label create' '{}'
+: > "$ud/calls"; rc=0; got=$(stub bash skills/on-duty/queue.sh add o/r reply 18 - "$ud/card" 2>/dev/null) || rc=$?
+calls=$(grep -E '^(label|issue) create' "$ud/calls" | cut -d' ' -f1-4)
+{ [ $rc = 0 ] && [[ $got =~ ^[0-9a-f]{8}$ ]] && [ "$calls" = $'label create githard -R\nissue create -R o/r' ]; } ||
+  { echo "queue.sh add on a repo without the label: exit $rc, got '$got', calls '$calls'"; fail=1; }
+rm "$ud/label_create.json"; : > "$ud/calls"; rc=0; stub bash skills/on-duty/queue.sh add o/r reply 18 - "$ud/card" >/dev/null 2>&1 || rc=$?
+{ [ $rc = 2 ] && ! grep -q '^issue create' "$ud/calls"; } || { echo "queue.sh add went on without the githard label: exit $rc"; fail=1; }
+# merge-when-green.sh refuses a fork PR unless act.sh's --allow-fork says the gate already passed it
+H=$(printf 'e%.0s' {1..40})
+fx 'repos/o/r/pulls/7' "{\"merged\":false,\"state\":\"open\",\"base\":{\"ref\":\"main\"},\"head\":{\"sha\":\"$H\",\"repo\":{\"full_name\":\"devon/r\"}}}"
+fx 'repos/o/r/rules/branches/main' '[]'; fx rate_limit '{"resources":{"core":{"remaining":5000,"reset":0}}}'; fx 'pr merge' '{}'
+fx "repos/o/r/commits/$H/check-runs?per_page=100" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success","details_url":"x/runs/1"}]}'
+rc=0; stub bash $mwg o/r 7 --head "$H" --timeout-min 1 >/dev/null 2>&1 || rc=$?
+[ $rc = 2 ] || { echo "merge-when-green.sh didn't refuse a fork PR: exit $rc"; fail=1; }
+: > "$ud/calls"; rc=0; stub bash $mwg o/r 7 --head "$H" --allow-fork --timeout-min 1 >/dev/null 2>&1 || rc=$?
+{ [ $rc = 0 ] && grep -qx "pr merge 7 -R o/r --squash --match-head-commit $H" "$ud/calls"; } ||
+  { echo "merge-when-green.sh --allow-fork didn't merge a green fork PR: exit $rc"; fail=1; }
 rm -rf "$ud"
 
 # The on-duty workflow template, read as text: there's no YAML parser to count on.

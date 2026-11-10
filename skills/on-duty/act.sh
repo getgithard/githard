@@ -11,12 +11,13 @@
 # lines), labels.txt, workflows/ (stands in for .github/workflows), queue.txt (queue issue number),
 # queue-comments.txt (its comment ids), comments.json ([{id, user, body}] for comments reacted to),
 # queue-comments.json (for --approved, as queue.sh parse reads it, plus last_edited_by), bot.txt and
-# replies-approved.txt. It writes DIR/posted-<target>.txt and DIR/card-<kind>-<target>.txt, and skips verify-release.sh.
+# replies-approved.txt. It writes DIR/posted-<target>.txt, DIR/card-<kind>-<target>.txt and DIR/ran.txt (each
+# command it would have run, one per line), and skips verify-release.sh.
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd); skills=$(dirname "$here")
 MAX=20 # proposals per run; a steered model shouldn't get to spam
-usage() { sed -n '2,14p' "$0" >&2; exit 2; }
+usage() { sed -n '2,15p' "$0" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 repo=$1; cfg=$2; sub=$3; shift 3
 [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] && [ -f "$cfg" ] || usage
@@ -35,7 +36,7 @@ tmp=$(mktemp -d) || exit 2; trap 'rm -rf "$tmp"' EXIT
 rd() { [ -f "$dir/$1" ] && cat "$dir/$1"; }
 clean() { printf '%s' "${1:--}" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-40; }
 ex() { # stdout is the report, so a command's output goes to stderr, with workflow commands defused
-  [ -n "$dry" ] && return 0
+  [ -n "$dry" ] && { printf '%s\n' "$*" >> "$dir/ran.txt"; return 0; }
   local rc=0; "$@" > "$tmp/out" 2>&1 || rc=$?; sed 's/^::/: :/' "$tmp/out" >&2; return $rc
 }
 
@@ -186,7 +187,7 @@ execute() {
       ex gh api -X POST "repos/$repo/issues/$key/labels" "${a[@]}" ;;
     merge) IFS=, read -ra checks <<<"$(get wait_for_checks)"
       for c in ${checks[@]+"${checks[@]}"}; do a+=(--require "$c"); done
-      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --timeout-min 20 ${a[@]+"${a[@]}"} ;;
+      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --allow-fork --timeout-min 20 ${a[@]+"${a[@]}"} ;;
     approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" ;;
     release) ex gh workflow run release.yml -R "$repo" -f "version=${version##*v}" ;; # builds a draft, never publishes
     publish) ex gh release edit "$tag" -R "$repo" --draft=false ;;
