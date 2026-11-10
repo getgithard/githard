@@ -273,6 +273,8 @@ while read -r state _ ckind ctarget comment; do
   if [ -n "$e" ] && [[ ",$(printf '%s' "$bot,$approvers" | tr '[:upper:]' '[:lower:]')," != *",$e,"* ]]; then
     mark "$comment" "Withdrawn: someone who can't approve edited this card."; echo "withdrawn $ckind $ctarget"; continue
   fi
+  # an ask is the owner's own decision, so there's nothing to carry out: a thumbs up just files it
+  if [ "$ckind" = ask ]; then mark "$comment" "Done: noted."; echo "done ask -"; continue; fi
   text=$(jq -r --argjson id "$comment" '.[] | select(.id == $id) | .body' "$tmp/comments")
   act=$(printf '%s\n' "$text" | sed -n 's/^<!-- githard-action \(.*\) -->$/\1/p' | head -1)
   if [[ $ckind == reply || $ckind == close ]]; then # the card's current draft, so a maintainer's edit is what goes out

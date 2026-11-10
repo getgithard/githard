@@ -386,6 +386,10 @@ rm -f "$ad/posted-18.txt"
 jq -n --rawfile c "$ad/card-reply-18.txt" '[{id: 910, user: "githard-bot", plus_one_by: ["bob"], body: ("<!-- githard-card id=f1b2c3d4 kind=reply target=18 head=- -->\n" + $c + "\n<!-- githard -->")}]' > "$ad/queue-comments.json"
 got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/null)
 { [ "$got" = "done reply 18" ] && grep -qx hi "$ad/posted-18.txt"; } || { echo "act.sh --approved on an escaped card: got '$got'"; fail=1; }
+# an approved ask card has nothing to carry out: it's marked done, never "Not done"
+jq -n '[{id: 920, user: "githard-bot", plus_one_by: ["bob"], body: "<!-- githard-card id=a2b2c3d4 kind=ask target=0 head=0123456789ab -->\n**Spending cap reached**\n<!-- githard -->"}]' > "$ad/queue-comments.json"
+got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/null) || true
+[ "$got" = "done ask -" ] || { echo "act.sh --approved on an ask card: got '$got'"; fail=1; }
 # --release-due: due once a user-facing commit is release_after_days old.
 g=$(mktemp -d); gc() { GIT_COMMITTER_DATE="$(( $(date +%s) - $1 * 86400 )) +0000" git -C "$g" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m "$2"; }
 git -C "$g" init -q; gc 20 'feat: first'
@@ -394,4 +398,5 @@ rdue 2 safe "with no tag"
 git -C "$g" -c tag.gpgsign=false tag v0.1.0; gc 10 'docs: words'; rdue 1 safe "with only docs"
 gc 10 'fix: a bug'; gc 1 'feat: new'; rdue 0 safe "with a 10-day-old fix"; rdue 1 slow "under a 30-day wait"
 rm -rf "$g" "$ad"
+
 exit $fail
