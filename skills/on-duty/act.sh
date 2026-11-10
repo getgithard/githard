@@ -225,7 +225,7 @@ execute() {
       ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --allow-fork --timeout-min 5 ${a[@]+"${a[@]}"} ;;
     approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" --head "$head" ;;
     # builds a draft, never publishes. The template takes 1.2.0 for v1.2.0, and a prefixed tag whole
-    release) c=$version; [[ $c == v* ]] && c=${c#v}; ex gh workflow run release.yml -R "$repo" -f "version=$c" ;;
+    release) c=$version; [[ $c =~ ^v[0-9] ]] && c=${c#v}; ex gh workflow run release.yml -R "$repo" -f "version=$c" ;;
     publish) ex gh release edit "$tag" -R "$repo" --draft=false ;;
     ask) : ;;
   esac

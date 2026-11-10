@@ -470,7 +470,10 @@ g2=$(mktemp -d); git -C "$g2" init -q; g=$g2 gc 20 'feat: first'; git -C "$g2" -
 grep -qx 'gh workflow run release.yml -R o/r -f version=mytool--v0.1.1' "$ad/ran.txt" || { echo "act.sh: prefixed release ran '$(cat "$ad/ran.txt")'"; fail=1; }
 g=$g2 gc 9 'feat!: drop the old flag'
 racase "$g2" "queued publish mytool--v1.0.0" 0 "publish of the breaking version the commits call for" '{"kind":"publish","tag":"mytool--v1.0.0","why":"w"}'
-rm -rf "$g" "$g2" "$ad"
+g3=$(mktemp -d); git -C "$g3" init -q; g=$g3 gc 20 'feat: first'; git -C "$g3" -c tag.gpgsign=false tag vault--v0.1.0; g=$g3 gc 10 'fix: a'
+: > "$ad/ran.txt"; racase "$g3" "done release vault--v0.1.1" 0 "release with a prefix starting with v" "$rel"
+grep -qx 'gh workflow run release.yml -R o/r -f version=vault--v0.1.1' "$ad/ran.txt" || { echo "act.sh: v-prefixed release ran '$(cat "$ad/ran.txt")'"; fail=1; }
+rm -rf "$g" "$g2" "$g3" "$ad"
 
 # unanswered.sh against a stand-in gh that answers "api [--paginate] PATH --jq F" from fixture files.
 ud=$(mktemp -d); mkdir "$ud/bin"
