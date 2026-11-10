@@ -189,5 +189,23 @@ gcase run "CONTRIBUTOR at limit" should-run "$s/limit2" --assoc CONTRIBUTOR --bo
 gcase run "limit none" should-run "$s/safe" --assoc NONE --body-file "$s/b-plain" --runs-today 99
 gcase skip "should-run missing CFG" should-run "$s/nope" --assoc MEMBER --body-file "$s/b-plain" --runs-today 0
 gcase skip "should-run missing body" should-run "$s/safe" --assoc MEMBER --body-file "$s/nobody" --runs-today 0
+# next-version.sh: stdin commits, LAST_TAG arg
+nv=skills/releases/next-version.sh
+nvcase() { # want tag stdin
+  local got; got=$(printf '%s\n' "$3" | bash $nv "$2" 2>/dev/null || true)
+  [ "$got" = "$1" ] || { echo "next-version.sh $2 with '$3': want '$1', got '$got'"; fail=1; }
+}
+nvcase v0.1.3 v0.1.2 'fix: a'
+nvcase v0.2.0 v0.1.2 'feat: b'
+nvcase "breaking v1.0.0" v0.1.2 'feat!: c'
+nvcase none v0.1.2 'docs: d'
+nvcase githard--v0.2.0 githard--v0.1.0 'feat: e'
+nvcase v0.1.3 v0.1.2 'perf(core): f'
+nvcase v0.2.0 v0.1.2 $'fix: a\nfeat(x): b'
+nvcase "breaking v1.0.0" v0.1.2 $'fix: a\n\nBREAKING CHANGE: gone'
+nvcase "breaking v3.0.0" v2.4.1 'fix(api)!: x'
+nvcase none v0.1.2 'this fix: is prose'
+rc=0; printf 'fix: a\n' | bash $nv main >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "next-version.sh accepted a bad tag"; fail=1; }
+[ -z "$(printf 'fix: a\n' | bash $nv v1.2 2>/dev/null || true)" ] || { echo "next-version.sh printed for a bad tag"; fail=1; }
 rm -rf "$s"
 exit $fail

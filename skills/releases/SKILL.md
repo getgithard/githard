@@ -47,6 +47,10 @@ It downloads the assets (`--pattern '*linux*'` for some of them), checks each ag
 
 The version and smoke commands run the downloaded build on your machine. Use them only on your own project's release.
 
+## Which version comes next
+
+Not sure whether this is a patch or a minor? Pipe the commits since the last tag in and it tells you: `git log --format='%s%n%b' v1.2.0..HEAD | bash ${CLAUDE_SKILL_DIR}/next-version.sh v1.2.0`. A breaking change comes back as `breaking v2.0.0`, because that one is your call.
+
 ## A Claude Code plugin
 
 A plugin's release is a tag: `claude plugin tag --dry-run`, then `claude plugin tag --push`. It tags `{name}--v{version}` and checks that `plugin.json` and the marketplace entry agree. Run the plugin's evals before you tag.
