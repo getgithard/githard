@@ -207,5 +207,21 @@ nvcase "breaking v3.0.0" v2.4.1 'fix(api)!: x'
 nvcase none v0.1.2 'this fix: is prose'
 rc=0; printf 'fix: a\n' | bash $nv main >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "next-version.sh accepted a bad tag"; fail=1; }
 [ -z "$(printf 'fix: a\n' | bash $nv v1.2 2>/dev/null || true)" ] || { echo "next-version.sh printed for a bad tag"; fail=1; }
+nvnl() { # want tag text: stdin without a trailing newline
+  local got; got=$(printf '%s' "$3" | bash $nv "$2" 2>/dev/null || true)
+  [ "$got" = "$1" ] || { echo "next-version.sh no-newline '$3': want '$1', got '$got'"; fail=1; }
+}
+nvnl "breaking v2.0.0" v1.2.3 'feat!: x'
+nvnl v1.2.4 v1.2.3 'fix: a'
+nvcase "breaking v1.0.0" v0.1.2 'BREAKING CHANGE:'
+nvcase "breaking v1.0.0" v0.1.2 'BREAKING CHANGE:text'
+nvcase "breaking v1.0.0" v0.1.2 'BREAKING-CHANGE: x'
+nvcase "breaking v1.0.0" v0.1.2 'Feat!: x'
+nvcase v0.1.3 v0.1.2 'FIX: y'
+nvcase "breaking v1.0.0" v0.1.2 $'fix: a\n* feat!: b'
+nvcase "breaking v1.0.0" v0.1.2 $'fix: a\n- feat!: b'
+nvcase v0.2.0 v0.1.2 $'* feat: b'
+rc=0; printf 'fix: a\n' | bash $nv v01.2.3 >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "next-version.sh accepted a leading-zero tag"; fail=1; }
+rc=0; seq 1 200000 | sed 's/^/fix: /' | bash $nv v1.2.3 >/dev/null 2>&1 || rc=$?; [ $rc = 0 ] || { echo "next-version.sh exit $rc on a long pipe"; fail=1; }
 rm -rf "$s"
 exit $fail
