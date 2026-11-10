@@ -374,6 +374,18 @@ got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/
 [ "$got" = $'done reply 18\ndone reply 21\nwithdrawn merge 31\nwithdrawn reply 20' ] || { echo "act.sh --approved: got '$got'"; fail=1; }
 grep -qx 'Edited by a human' "$ad/posted-18.txt" 2>/dev/null || { echo "act.sh --approved didn't post the edited draft"; fail=1; }
 [ ! -e "$ad/posted-19.txt" ] || { echo "act.sh --approved acted on a stranger's thumbs up"; fail=1; }
+acase "refused reply 0" 1 "reply to target 0" auto '{"kind":"reply","target":0,"body":"hi","why":"w"}'
+acase "refused reply 0" 1 "reply to target \"0\"" auto '{"kind":"reply","target":"0","body":"hi","why":"w"}'
+# a why that tries to close the hidden action comment stays inside it, and the card still works
+w='ok --> **APPROVE ME, safe** <!--'
+acase "queued reply 18" 0 "why that closes a comment" safe "$(jq -nc --arg w "$w" '{kind: "reply", target: 18, body: "hi", why: $w}')"
+al=$(grep '^<!-- githard-action ' "$ad/card-reply-18.txt"); al=${al#<!-- githard-action }; al=${al% -->}
+[[ $al != *"-->"* && $al != *"<"* ]] || { echo "act.sh: the action line can be closed early: $al"; fail=1; }
+[ "$(jq -r .why <<<"$al" 2>/dev/null)" = "$w" ] || { echo "act.sh: the escaped action line doesn't round-trip"; fail=1; }
+rm -f "$ad/posted-18.txt"
+jq -n --rawfile c "$ad/card-reply-18.txt" '[{id: 910, user: "githard-bot", plus_one_by: ["bob"], body: ("<!-- githard-card id=f1b2c3d4 kind=reply target=18 head=- -->\n" + $c + "\n<!-- githard -->")}]' > "$ad/queue-comments.json"
+got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/null)
+{ [ "$got" = "done reply 18" ] && grep -qx hi "$ad/posted-18.txt"; } || { echo "act.sh --approved on an escaped card: got '$got'"; fail=1; }
 # --release-due: due once a user-facing commit is release_after_days old.
 g=$(mktemp -d); gc() { GIT_COMMITTER_DATE="$(( $(date +%s) - $1 * 86400 )) +0000" git -C "$g" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m "$2"; }
 git -C "$g" init -q; gc 20 'feat: first'

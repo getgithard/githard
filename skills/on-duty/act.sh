@@ -131,7 +131,7 @@ validate() {
     *) digits target || { reason="target must be digits"; return 1; }; key=$target ;;
   esac
   # canonical numbers only: "05" must not slip past the queue-issue check for #5
-  [ "$key" = 0 ] || [[ $key =~ ^[1-9][0-9]{0,17}$ ]] || { reason="target must be a plain number"; return 1; }
+  case $kind in release|publish|ask) ;; *) [[ $key =~ ^[1-9][0-9]{0,17}$ ]] || { reason="target must be a plain number"; return 1; } ;; esac
   [ "$key" = 0 ] || [ "$key" != "$qnum" ] || [ "$kind" = react ] || { reason="that's the Waiting for you issue"; return 1; }
   case $kind in
     react) [[ " +1 rocket eyes hooray heart " == *" $content "* ]] || { reason="reaction not allowed"; return 1; }
@@ -209,7 +209,9 @@ queue_card() { # posts a card for the current action; prints its ID
   [ "$kind" = ask ] && line="Question"
   { printf '**%s**\n\n' "$line"
     fenced "$why"; [ "$kind" = ask ] && fenced "$title"$'\n\n'"$body"
-    printf '<!-- githard-action %s -->\n' "$(jq -c --arg v "${version:-}" 'del(.body) | if .kind == "release" then .version = $v else . end' <<<"$act")"
+    # < and > only occur inside JSON strings, so escaping them keeps valid JSON that can't close the comment
+    printf '<!-- githard-action %s -->\n' "$(jq -c --arg v "${version:-}" 'del(.body) | if .kind == "release" then .version = $v else . end' <<<"$act" |
+      sed 's/</\\u003c/g; s/>/\\u003e/g')"
     case $kind in reply|close) fenced "<!-- githard-draft -->"$'\n'"$body"$'\n'"<!-- /githard-draft -->" ;; esac
   } > "$tmp/card"
   if [ -n "$dry" ]; then cp "$tmp/card" "$dir/card-$kind-$key.txt"; echo dry-run; return 0; fi
