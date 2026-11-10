@@ -220,7 +220,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHARD_TOKEN }}
           EXEC: ${{ steps.claude.outputs.execution_file }}
           OUTCOME: ${{ steps.claude.outcome }}
-          SIG: ${{ steps.plan.outputs.sig }}
           SPEND: ${{ vars.GITHARD_SPEND }}
           MONTH: ${{ steps.plan.outputs.month }}
         run: |
@@ -240,8 +239,6 @@ jobs:
           fi
           gh variable set GITHARD_SPEND -R "$REPO" --body "$new"
           echo "This run cost about \$$cost. Spent this month: ${new#* }."
-          # remember what this scheduled run looked at, so an unchanged list doesn't wake Claude again
-          if [ -n "$SIG" ] && [ "$OUTCOME" = success ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi
 
       - name: Carry out the proposals
         if: always() && steps.claude.outcome == 'success'
@@ -249,6 +246,7 @@ jobs:
         env:
           BASH_ENV: ""
           GH_TOKEN: ${{ secrets.GITHARD_TOKEN }}
+          SIG: ${{ steps.plan.outputs.sig }}
         run: |
           f="$RUNNER_TEMP/githard/actions.json"
           if [ ! -f "$f" ]; then echo "::warning::on-duty: Claude finished without writing a proposals file"; exit 0; fi
@@ -261,3 +259,5 @@ jobs:
           cfg=$(mktemp)
           bash .githard/skills/on-duty/config.sh .github/githard.yml > "$cfg"
           bash .githard/skills/on-duty/act.sh "$REPO" "$cfg" "$f"
+          # only once every proposal went out or was queued: anything refused gets looked at again
+          if [ -n "$SIG" ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi

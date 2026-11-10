@@ -489,6 +489,11 @@ grep -qE "^    if: .*contains\(.*'<!-- githard -->'" "$wf" && ! grep -q '^concur
 [ "$(grep -c '^        shell: /bin/bash --noprofile --norc -e -o pipefail {0}$' "$wf")" = 2 ] &&
   [ "$(grep -c '^          BASH_ENV: ""$' "$wf")" = 2 ] && grep -q 'config.sh .github/githard.yml > "$cfg"' "$wf" ||
   { echo "$wf: a step after Claude trusts the shell environment or RUNNER_TEMP's config"; fail=1; }
+# GITHARD_SEEN is written once, in the carry step, only after act.sh (which exits the step on failure)
+awk '/^      - name: / { carry = ($0 ~ /Carry out the proposals/) }
+  carry && /act\.sh "\$REPO" "\$cfg" "\$f"/ { acted = 1 }
+  /gh variable set GITHARD_SEEN/ { n++; if (!(carry && acted)) bad = 1 }
+  END { exit (bad || n != 1) }' "$wf" || { echo "$wf: GITHARD_SEEN can be set before act.sh succeeds"; fail=1; }
 # filled in the way setup fills it, the template passes repo-setup's pin check
 tmp=$(mktemp -d); mkdir -p "$tmp/.github/workflows"
 sed 's/GITHARD_SHA_PLACEHOLDER/0123456789abcdef0123456789abcdef01234567/' "$wf" > "$tmp/.github/workflows/githard-on-duty.yml"
