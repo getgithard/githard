@@ -16,12 +16,14 @@ maint='^(OWNER|MEMBER|COLLABORATOR)$'
 prs=$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" \
   --jq '.[] | select(.user.type != "Bot" and (.author_association | test("'"$maint"'") | not)) | [.number, .user.login, .updated_at, .html_url] | @tsv') ||
   { echo "unknown  couldn't list PRs for $repo"; exit 2; }
-[ -z "$prs" ] && { gh api "repos/$repo" --jq .full_name >/dev/null 2>&1 && exit 0; echo "unknown  no answer for $repo"; exit 2; }
+# No open PRs is fine, but only if the repo answers; the issue check below still runs.
+[ -z "$prs" ] && { gh api "repos/$repo" --jq .full_name >/dev/null 2>&1 || { echo "unknown  no answer for $repo"; exit 2; }; }
 
 days_since() { local t; t=$(date -u -j -f %Y-%m-%dT%H:%M:%SZ "$1" +%s 2>/dev/null || date -u -d "$1" +%s); echo $(( (now - t) / 86400 )); }
 
 status=0
 while IFS=$'\t' read -r n who updated url; do
+  [ -n "$n" ] || continue
   replies=$( { gh api --paginate "repos/$repo/issues/$n/comments" --jq '.[].author_association' &&
     gh api --paginate "repos/$repo/pulls/$n/reviews" --jq '.[].author_association'; } 2>/dev/null) ||
     { echo "unknown     #$n @$who  couldn't read replies  $url"; status=2; continue; }
