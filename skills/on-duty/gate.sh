@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Decide whether a proposed action goes out or waits for a human. The model never decides this.
-# Usage: bash gate.sh decide CFG KIND [--paths FILE] [--review-required true|false] [--breaking true|false] [--replies-approved N]
+# Usage: bash gate.sh decide CFG KIND [--paths FILE] [--review-required true|false] [--breaking true|false]
+#                           [--replies-approved N] [--labeled-trigger true|false]
 #        bash gate.sh should-run CFG --assoc ASSOC --body-file FILE --runs-today N
 # CFG is the output of config.sh saved to a file. --paths lists one changed file per line (merge, approve-runs).
+# --labeled-trigger says whether any workflow runs when a label is added: then a label is a privileged act.
 # Stdout: decide prints "go" or "queue <reason>"; should-run prints "run" or "skip <reason>". Exit 0.
 # Exit 2 on a bad command line. Anything missing, garbled or unknown queues or skips, never goes.
 set -uo pipefail
@@ -20,11 +22,11 @@ get() { grep "^$1=" "$cfg" | head -1 | cut -d= -f2-; }
 
 if [ "$sub" = decide ]; then
   kind=${1:-}; shift || no "no kind"
-  paths=""; review=""; breaking=""; approved=""
+  paths=""; review=""; breaking=""; approved=""; labeled=""
   while [ $# -gt 0 ]; do
     [ $# -ge 2 ] || no "flag $1 has no value"
     case $1 in
-      --paths) paths=$2 ;; --review-required) review=$2 ;; --breaking) breaking=$2 ;; --replies-approved) approved=$2 ;;
+      --paths) paths=$2 ;; --review-required) review=$2 ;; --breaking) breaking=$2 ;; --replies-approved) approved=$2 ;; --labeled-trigger) labeled=$2 ;;
       *) no "unknown flag $1" ;;
     esac
     shift 2
@@ -37,7 +39,7 @@ if [ "$sub" = decide ]; then
   by_mode() { [ "$mode" = auto ] && echo go || no "safe mode"; }
   case $kind in
     ask|settings) no "$kind always waits for a human" ;;
-    label) echo go ;;
+    label) if [ "$labeled" = false ]; then echo go; else by_mode; fi ;;
     reply|react|assign)
       if [ "$mode" = auto ] || [ "$chat" = auto ]; then echo go
       elif [ "$chat" = approve ]; then no "chat needs approval"

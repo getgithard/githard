@@ -45,6 +45,8 @@ They set both secrets themselves. Don't ask them to paste a token into the chat.
 
 Run `gh api repos/OWNER/REPO/rules/branches/DEFAULT --jq '[.[] | select(.type == "pull_request") | .parameters.required_approving_review_count] | max // 0'`. If it's above 0, say plainly that merges will always wait for a human, in full auto too. The bot never posts an approving review, because under the maintainer identity that would be a fake human review. Don't change the ruleset.
 
+The merge script reads check runs only, both the ruleset's required checks and any in `wait_for_checks`. A service that reports an old-style commit status instead never shows as passed, so a merge that needs it waits out its time and fails. If the ruleset requires one of those, tell them merges will keep failing until that service reports a check run, or they merge by hand.
+
 ### Add the files and open a PR
 
 1. Work out the GitHard commit to pin. The installed plugin's version is in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`, and its release tag is `githard--v<version>`:
@@ -96,7 +98,7 @@ Load the skill and follow its rules for the judgment. on-duty adds no rules of i
 | An issue opened, a claim, a question, a quiet PR from the unanswered file | `contributors`, and `issues-and-roadmap` for labels and scoping |
 | A PR from a fork | `fork-pr-safety`: read the whole diff with `gh pr diff` before proposing `approve-runs`. You can't dispatch its agent, so use its checklist yourself |
 | A PR that looks ready to merge | `merging`. The scripts check the ruleset, the checks on the head commit and risky paths like `.github/workflows/`, so propose it and say why. If the gate will hold it for a human, say that in the reply. Don't skip the proposal yourself |
-| A release is due, or a draft release is waiting | `releases` |
+| A release is due, or a draft release is waiting | `releases`. on-duty doesn't keep running release notes yet: notes stay with `releases`, run by a person, and a draft on-duty starts has only the notes the release workflow writes (a placeholder, in `releases`' template) until someone writes real ones |
 | A PR that changes docs, or release notes | `docs-honesty` |
 | Any words a person will read | `writing`, with the project's own style guide if it has one |
 
@@ -112,8 +114,8 @@ Write one JSON object, `{"actions": [...]}`, with at most 20 entries. If nothing
 | `close` | `target`, `body` | Posts `body`, then closes the issue or PR |
 | `react` | `comment_id` (the number at the end of a comment's `#issuecomment-` URL), `content`: `+1`, `rocket`, `eyes`, `hooray` or `heart` | Reacts to a comment |
 | `assign` | `target`, `login` | Assigns someone |
-| `label` | `target`, `labels`: a list of labels that already exist | Adds labels |
-| `merge` | `target` (PR number), `head` | Merges once the required checks pass on that head commit. A PR from a fork goes through the same gate as any other |
+| `label` | `target`, `labels`: a list of labels that already exist | Adds labels. A label any workflow names is refused, and if any workflow runs when a label is added, labels follow the mode like a merge |
+| `merge` | `target` (PR number), `head` | Merges once the required checks pass on that head commit. A PR from a fork goes through the same gate as any other. At most 3 merges go out per run, and the rest wait for the next one |
 | `approve-runs` | `target` (fork PR number), `head` | Approves the waiting CI runs on that head commit. Changes to risky paths like `.github/` wait for a human, as a merge does |
 | `release` | none | Starts a draft release. The version comes from the commits, not from you. It's refused if that release already exists, draft or not |
 | `publish` | `tag`, like `v1.4.0` or `name--v1.4.0` | Publishes a draft release after `verify-release.sh` passes. A tag that isn't the version the commits call for, or that starts a new major, waits for a human |

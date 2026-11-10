@@ -45,7 +45,9 @@ done <<<"$fresh"
 issues=$(gh api --paginate "repos/$repo/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .comments > 0) | .number' 2>/dev/null) ||
   { echo "unknown     couldn't list issues for $repo"; exit 2; }
 for n in $issues; do
-  last=$(gh api "repos/$repo/issues/$n/comments?per_page=100" --jq '[.[] | select(.user.type != "Bot")] | last | "\(.author_association) \(.user.login) \(.html_url)"' 2>/dev/null) ||
+  # every page, so the latest comment on a long thread isn't lost past the first 100
+  last=$(gh api --paginate --slurp "repos/$repo/issues/$n/comments?per_page=100" 2>/dev/null |
+    jq -r '[.[][] | select(.user.type != "Bot")] | last | "\(.author_association) \(.user.login) \(.html_url)"') ||
     { echo "unknown     #$n  couldn't read comments"; status=2; continue; }
   read -r assoc who url <<<"$last"
   [ -n "$assoc" ] || continue

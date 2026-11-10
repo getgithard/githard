@@ -223,8 +223,9 @@ jobs:
           SPEND: ${{ vars.GITHARD_SPEND }}
           MONTH: ${{ steps.plan.outputs.month }}
         run: |
-          # this step runs only GitHard's scripts and reads no workspace file, so only .githard must be untouched
-          if [ -n "$(git -C .githard status --porcelain --untracked-files=all)" ]; then
+          # this step runs only GitHard's scripts and reads no workspace file, so only .githard must be untouched.
+          # fsmonitor off, so no git config can make the status check run a program beside the write token
+          if [ -n "$(git -c core.fsmonitor=false -C .githard status --porcelain --untracked-files=all)" ]; then
             echo "::error::GitHard's own files changed while Claude ran, so on-duty won't run its scripts after it."
             exit 1
           fi
@@ -251,7 +252,8 @@ jobs:
           f="$RUNNER_TEMP/githard/actions.json"
           if [ ! -f "$f" ]; then echo "::warning::on-duty: Claude finished without writing a proposals file"; exit 0; fi
           # Claude could only write the proposals file; anything else changed means stop
-          if [ -n "$(git status --porcelain --untracked-files=all -- . ':!.githard')" ] || [ -n "$(git -C .githard status --porcelain --untracked-files=all)" ]; then
+          if [ -n "$(git -c core.fsmonitor=false status --porcelain --untracked-files=all -- . ':!.githard')" ] ||
+            [ -n "$(git -c core.fsmonitor=false -C .githard status --porcelain --untracked-files=all)" ]; then
             echo "::error::Files in the checkout changed while Claude ran, so on-duty won't act on this run's proposals."
             exit 1
           fi
@@ -260,6 +262,6 @@ jobs:
           bash .githard/skills/on-duty/config.sh .github/githard.yml > "$cfg"
           rc=0; bash .githard/skills/on-duty/act.sh "$REPO" "$cfg" "$f" || rc=$?
           # a refusal (1) would be refused again, so it isn't worth paying Claude for the same list.
-          # Only 2, act.sh couldn't read or finish its input, means look again next time
+          # Only 2, unreadable input or merges left over the per-run limit, means look again next time
           if [ "$rc" -le 1 ] && [ -n "$SIG" ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi
           exit "$rc"

@@ -6,10 +6,12 @@
 # ACTIONS_JSON is {"actions": [...]} written by the model. All of it is untrusted: every field is
 # checked, and every fact (heads, changed files, review rules, labels, versions) is fetched here.
 # Prints "done KIND TARGET", "queued KIND TARGET ID", "withdrawn KIND TARGET" or "refused KIND TARGET why".
-# Exit 0 all done or queued, 1 something refused or failed, 2 bad command line or unreadable input.
+# Exit 0 all done or queued, 1 something refused or failed, 2 bad command line or unreadable input, or
+# merges left for the next run: at most MERGES go out per run, so merge waits can't outrun the job.
 # --dry-run never calls gh. It reads facts from DIR: <pr>.txt (changed files), heads.txt ("pr sha"
 # lines), labels.txt, workflows/ (stands in for .github/workflows), queue.txt (queue issue number),
-# queue-comments.txt (its comment ids), comments.json ([{id, user, body}] for comments reacted to),
+# queue-comments.txt (its comment ids), comments.json ([{id, user, body}] for comments reacted to), releases.txt
+# (existing release tags), states.txt ("number open|closed" lines, for approved reply and close cards),
 # queue-comments.json (for --approved, as queue.sh parse reads it, plus last_edited_by), bot.txt and
 # replies-approved.txt. It writes DIR/posted-<target>.txt, DIR/card-<kind>-<target>.txt and DIR/ran.txt (each
 # command it would have run, one per line), and skips verify-release.sh.
@@ -17,7 +19,8 @@ set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd); skills=$(dirname "$here")
 MAX=20 # proposals per run; a steered model shouldn't get to spam
-usage() { sed -n '2,15p' "$0" >&2; exit 2; }
+MERGES=3 # merges per run, each waiting at most 5 minutes: two act.sh runs and Claude fit in the 45-minute job
+usage() { sed -n '2,17p' "$0" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 repo=$1; cfg=$2; sub=$3; shift 3
 [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] && [ -f "$cfg" ] || usage
@@ -132,6 +135,16 @@ publish_breaking() { # prints false only for the version the commits call for, w
   last=$(git describe --tags --abbrev=0 2>/dev/null); m=${tag##*v}; m=${m%%.*}; l=${last##*v}; l=${l%%.*}
   if [ $rc != 2 ] && [ "$version" = "$tag" ] && [[ $l =~ ^[0-9]+$ ]] && [ $((10#$m)) -le $((10#$l)) ]; then echo false; else echo true; fi
 }
+labeled_trigger() { # prints false only when no workflow runs on a label being added; unknown counts as yes
+  local w=.github/workflows rc=0; [ -n "$dry" ] && w=$dir/workflows
+  [ -d "$w" ] || { echo true; return; }
+  grep -rqw -- labeled "$w" || rc=$?
+  [ $rc = 1 ] && echo false || echo true
+}
+target_state() { # prints "open" when issue or PR $1 is open and unlocked; nothing when GitHub doesn't answer
+  if [ -n "$dry" ]; then rd states.txt | awk -v n="$1" '$1 == n {print $2}' | grep .; return; fi
+  gh api "repos/$repo/issues/$1" --jq 'if .state == "open" and (.locked | not) then "open" else "shut" end'
+}
 replies_approved() { if [ -n "$dry" ]; then rd replies-approved.txt; else gh variable get GITHARD_REPLIES_APPROVED -R "$repo" 2>/dev/null; fi; }
 
 # --- validate $act (one action as JSON). Sets kind target cid login content tag labels body title why key rhead.
@@ -182,6 +195,7 @@ facts() {
   esac
   case $kind in
     merge) local r; r=$(review_rule "$key") && [[ $r =~ ^(true|false)$ ]] && g+=(--review-required "$r") ;;
+    label) g=(--labeled-trigger "$(labeled_trigger)") ;;
     reply|react|assign) local n; n=$(replies_approved) && [[ $n =~ ^[0-9]+$ ]] && g=(--replies-approved "$n") ;;
     release) local rc=0; release_facts || rc=$?
       [ $rc = 0 ] || { [ $rc = 1 ] && reason="no release due yet" || reason="couldn't work out the release"; return 1; }
@@ -208,7 +222,7 @@ execute() {
       ex gh api -X POST "repos/$repo/issues/$key/labels" "${a[@]}" ;;
     merge) IFS=, read -ra checks <<<"$(get wait_for_checks)"
       for c in ${checks[@]+"${checks[@]}"}; do a+=(--require "$c"); done
-      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --allow-fork --timeout-min 20 ${a[@]+"${a[@]}"} ;;
+      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --allow-fork --timeout-min 5 ${a[@]+"${a[@]}"} ;;
     approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" --head "$head" ;;
     # builds a draft, never publishes. The template takes 1.2.0 for v1.2.0, and a prefixed tag whole
     release) c=$version; [[ $c == v* ]] && c=${c#v}; ex gh workflow run release.yml -R "$repo" -f "version=$c" ;;
@@ -248,22 +262,28 @@ queue_card() { # posts a card for the current action; prints its ID
 if [ "$sub" != --approved ]; then
   [[ $sub != -* && -f $sub ]] || usage
   jq -e '.actions | type == "array"' "$sub" >/dev/null 2>&1 || { echo "act.sh: $sub has no actions list" >&2; exit 2; }
-  out=0; i=0
+  out=0; i=0; merges=0; later=""
   while IFS= read -r act; do
     i=$((i + 1)); version=""
     if [ $i -gt $MAX ]; then kind=$(str kind); echo "refused $(clean "$kind") - over $MAX proposals in one run"; out=1; continue; fi
     if ! validate || ! facts; then echo "refused $(clean "$kind") $(clean "${key:-$target$cid$tag}") $reason"; out=1; continue; fi
     verdict=$(bash "$here/gate.sh" decide "$cfg" "$kind" ${g[@]+"${g[@]}"} 2>/dev/null) || verdict=""
+    if [ "$verdict" = go ] && [ "$kind" = merge ] && [ $merges -ge $MERGES ]; then
+      echo "refused merge $key over $MERGES merges in one run, so the next run looks again"; later=1; continue
+    fi
     if [ "$verdict" = go ]; then
+      [ "$kind" = merge ] && merges=$((merges + 1))
       if execute; then echo "done $kind $(shown)"; else echo "refused $kind $(shown) GitHub said no"; out=1; fi
     elif id=$(queue_card); then echo "queued $kind $(shown) $id"; [ -n "$qnum" ] || find_queue
     else echo "refused $kind $(shown) couldn't post the card"; out=1; fi
   done < <(jq -c '.actions[]' "$sub")
+  [ -z "$later" ] || exit 2
   exit $out
 fi
 
 # --- approved cards: no model here, only the card text a human saw and approved
 [ -n "$qnum" ] || exit 0
+merges=0
 mark() { [ -n "$dry" ] || bash "$here/queue.sh" "done" "$repo" "$1" "$2" >/dev/null || echo "act.sh: couldn't mark card $1 done" >&2; }
 CARD='^<!-- githard-card id=[0-9a-f]{8} kind=[a-z-]+ target=(?<t>[0-9]+) head=[0-9a-f]+ -->'
 if [ -n "$dry" ]; then
@@ -301,6 +321,11 @@ while read -r state _ ckind ctarget comment; do
   fi
   # an ask is the owner's own decision, so there's nothing to carry out: a thumbs up just files it
   if [ "$ckind" = ask ]; then mark "$comment" "Done: noted."; echo "done ask -"; continue; fi
+  # a reply to a thread that's closed or locked since the card was written isn't what the human approved
+  if [[ $ckind == reply || $ckind == close ]]; then
+    st=$(target_state "$ctarget") || { echo "refused $ckind $ctarget couldn't read #$ctarget"; out=1; continue; }
+    [ "$st" = open ] || { mark "$comment" "Withdrawn: #$ctarget is closed or locked now."; echo "withdrawn $ckind $ctarget"; continue; }
+  fi
   text=$(jq -r --argjson id "$comment" '.[] | select(.id == $id) | .body' "$tmp/comments")
   act=$(printf '%s\n' "$text" | sed -n 's/^<!-- githard-action \(.*\) -->$/\1/p' | head -1)
   if [[ $ckind == reply || $ckind == close ]]; then # the card's current draft, so a maintainer's edit is what goes out
@@ -314,6 +339,10 @@ while read -r state _ ckind ctarget comment; do
     { [ "$head" != - ] && [ "$head" != "$chead" ]; } || { [ "$kind" = release ] && [ "$version" != "$want" ]; }; then
     reason=${reason:-the card no longer matches}; mark "$comment" "Not done: $reason."
     echo "refused $ckind $ctarget $reason"; out=1; continue
+  fi
+  if [ "$kind" = merge ]; then # left approved and unmarked, so the next run carries it out
+    [ $merges -lt $MERGES ] || { echo "refused merge $key over $MERGES merges in one run, so the next run carries it out"; out=1; continue; }
+    merges=$((merges + 1))
   fi
   if execute; then
     mark "$comment" "Done."; echo "done $kind $(shown)"
