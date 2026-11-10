@@ -93,7 +93,7 @@ Load the skill and follow its rules for the judgment. on-duty adds no rules of i
 |---|---|
 | An issue opened, a claim, a question, a quiet PR from the unanswered file | `contributors`, and `issues-and-roadmap` for labels and scoping |
 | A PR from a fork | `fork-pr-safety`: read the whole diff with `gh pr diff` before proposing `approve-runs`. You can't dispatch its agent, so use its checklist yourself |
-| A PR that looks ready to merge | `merging`. The scripts check the ruleset and the checks on the head commit, so propose it and say why |
+| A PR that looks ready to merge | `merging`. The scripts check the ruleset, the checks on the head commit and risky paths like `.github/workflows/`, so propose it and say why. If the gate will hold it for a human, say that in the reply. Don't skip the proposal yourself |
 | A release is due, or a draft release is waiting | `releases` |
 | A PR that changes docs, or release notes | `docs-honesty` |
 | Any words a person will read | `writing`, with the project's own style guide if it has one |
