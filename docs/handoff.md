@@ -156,3 +156,19 @@ bash skills/openssf-badge/badge-status.sh 16471 silver
 ```
 
 Not ours, so leave them alone: a podman VM, a Playwright test server and a merge script from another project may be running on this Mac.
+
+## 2026-11-10 UTC: on-duty designed, plan written
+
+**Done:**
+- `unanswered.sh` now checks issues even when no PRs are open (#80). That bug hid a claim on keyparity#18.
+- @O1sumitkumar is assigned keyparity#18 (Ruby scanning) and has been welcomed.
+- James approved the design for `on-duty`, which looks after a repo 24/7 in full auto or safe mode, on each project's own Claude account: `docs/on-duty.md` (#81).
+
+**In progress:**
+- The implementation plan is at `docs/superpowers/plans/2026-11-10-on-duty.md`. It's local only, because James's global git ignore excludes `docs/superpowers/`.
+- It's waiting on James to review the plan and pick the execution method. Its Task 0 creates milestone M6 and the issue.
+
+**Next:**
+- Build on-duty once James approves the plan.
+- Watch for @O1sumitkumar's PR on keyparity#18. It's a first-time fork PR, so read the diff before approving CI.
+- #18 launch and #77 coverage are still waiting on James's choice.
