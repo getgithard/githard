@@ -506,6 +506,17 @@ fx 'repos/o/r/issues/9/comments?per_page=100' '[{"author_association":"OWNER","u
 got=$(GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash skills/contributors/unanswered.sh o/r 2>&1) && rc=0 || rc=$?
 { [ $rc = 1 ] && [ "$got" = "unanswered  issue #9 @sam  c2" ]; } ||
   { echo "unanswered.sh on a reply past the first page: exit $rc, got '$got'"; fail=1; }
+# an outside issue whose only comments are from bots is still waiting, and names its author
+fx 'repos/o/r/issues?state=open&per_page=100' '[{"number":10,"comments":1,"author_association":"NONE","user":{"login":"sam","type":"User"},"html_url":"u10"},
+  {"number":11,"comments":1,"author_association":"NONE","user":{"login":"bot2","type":"Bot"},"html_url":"u11"},
+  {"number":12,"comments":1,"author_association":"NONE","user":{"login":"bot2","type":"Bot"},"html_url":"u12"}]'
+fx 'repos/o/r/issues/10/comments?per_page=100' '[{"author_association":"NONE","user":{"login":"ci","type":"Bot"},"html_url":"c4"}]'
+fx 'repos/o/r/issues/11/comments?per_page=100' '[{"author_association":"NONE","user":{"login":"ci","type":"Bot"},"html_url":"c5"}]'
+fx 'repos/o/r/issues/12/comments?per_page=100' '[{"author_association":"NONE","user":{"login":"pat","type":"User"},"html_url":"c6"}]'
+got=$(GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash skills/contributors/unanswered.sh o/r 2>&1) && rc=0 || rc=$?
+{ [ $rc = 1 ] && [ "$got" = "unanswered  issue #10 @sam  u10
+unanswered  issue #12 @pat  c6" ]; } ||
+  { echo "unanswered.sh on issues with only bot comments, or bot-opened: exit $rc, got '$got'"; fail=1; }
 # pending.sh: green PRs and waiting fork runs wake the schedule, unless a bot card names that head
 A=$(printf 'a%.0s' {1..40}); B=$(printf 'b%.0s' {1..40}); C=$(printf 'c%.0s' {1..40})
 fx 'repos/o/r/actions/runs?status=action_required&per_page=100' "{\"workflow_runs\":[{\"head_sha\":\"$A\"}]}"

@@ -42,15 +42,18 @@ while IFS=$'\t' read -r n who url; do
   echo "unanswered  issue #$n @$who  $url"; [ $status = 0 ] && status=1
 done <<<"$fresh"
 # Issues whose latest comment is from outside, with no maintainer reply after it: a claim or a question nobody answered.
-issues=$(gh api --paginate "repos/$repo/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .comments > 0) | .number' 2>/dev/null) ||
+issues=$(gh api --paginate "repos/$repo/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .comments > 0)
+  | [.number, .user.type, .author_association, .user.login, .html_url] | @tsv' 2>/dev/null) ||
   { echo "unknown     couldn't list issues for $repo"; exit 2; }
-for n in $issues; do
+while IFS=$'\t' read -r n it ia iw iu <&3; do
+  [ -n "$n" ] || continue
   # every page, so the latest comment on a long thread isn't lost past the first 100
   last=$(gh api --paginate --slurp "repos/$repo/issues/$n/comments?per_page=100" 2>/dev/null |
-    jq -r '[.[][] | select(.user.type != "Bot")] | last | "\(.author_association) \(.user.login) \(.html_url)"') ||
+    jq -r '[.[][] | select(.user.type != "Bot")] | last | values | "\(.author_association) \(.user.login) \(.html_url)"') ||
     { echo "unknown     #$n  couldn't read comments"; status=2; continue; }
+  # only bots have replied: the issue itself is the latest human post, unless a bot opened it
+  if [ -z "$last" ]; then [ "$it" = Bot ] && continue; last="$ia $iw $iu"; fi
   read -r assoc who url <<<"$last"
-  [ -n "$assoc" ] || continue
   if ! grep -qE "$maint" <<<"$assoc"; then echo "unanswered  issue #$n @$who  $url"; [ $status = 0 ] && status=1; fi
-done
+done 3<<<"$issues"
 exit $status
