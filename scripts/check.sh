@@ -108,4 +108,22 @@ rm -rf "$s"
 while read -r tool; do
   command -v "$tool" >/dev/null || { echo "Brewfile lists $tool, but it isn't installed"; fail=1; }
 done < <(sed -nE 's/^brew "([a-z]+)(@3)?".*/\1\2/p' Brewfile | sed 's/^python@3$/python3/')
+# on-duty config.sh reads a valid file, refuses the bare template, and warns on risky values.
+cfg=skills/on-duty/config.sh; tpl=skills/on-duty/templates/.github/githard.yml
+s=$(mktemp -d)
+printf 'mode: safe\nidentity: bot\nmonthly_cap_usd: 25\nwait_for_checks: [CodeQL, Scorecard]\n' > "$s/ok.yml"
+out=$(bash $cfg "$s/ok.yml" 2>/dev/null) || { echo "config.sh refused a valid file"; fail=1; }
+for line in mode=safe chat=approve-first approve_first_count=5 wait_for_checks=CodeQL,Scorecard; do
+  grep -qx "$line" <<<"$out" || { echo "config.sh didn't print $line"; fail=1; }
+done
+grep -q '^invalid  identity' <<<"$(bash $cfg "$tpl" 2>&1 >/dev/null)" || { echo "config.sh accepted the bare template"; fail=1; }
+rc=0; bash $cfg "$tpl" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh didn't exit 2 on the template"; fail=1; }
+printf 'identity: bot\nmonthly_cap_usd: none\n' > "$s/none.yml"
+grep -q '^warning' <<<"$(bash $cfg "$s/none.yml" 2>&1 >/dev/null)" || { echo "config.sh didn't warn on monthly_cap_usd: none"; fail=1; }
+printf 'identity: bot\nmonthly_cap_usd: 5\nmode: sometimes\n' > "$s/mode.yml"
+rc=0; bash $cfg "$s/mode.yml" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh accepted mode: sometimes"; fail=1; }
+printf 'identity: bot\nmonthly_cap_usd: 5\napprovers: [a b]\n' > "$s/appr.yml"
+rc=0; bash $cfg "$s/appr.yml" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh accepted approvers: [a b]"; fail=1; }
+rc=0; bash $cfg "$s/missing.yml" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh didn't exit 2 on a missing file"; fail=1; }
+rm -rf "$s"
 exit $fail
