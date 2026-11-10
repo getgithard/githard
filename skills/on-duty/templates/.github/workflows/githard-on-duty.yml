@@ -35,6 +35,8 @@ jobs:
       issues: read
       pull-requests: read
       actions: read
+      checks: read # pending.sh reads each PR's check results
+      statuses: read
     env:
       REPO: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }} # read-only; only the steps that write swap in GITHARD_TOKEN
@@ -56,8 +58,11 @@ jobs:
       - name: Skip app events
         id: actor
         env:
+          EVENT: ${{ github.event_name }}
           ACTOR: ${{ github.actor }}
         run: |
+          # the schedule is the safety net, so it always goes on, whoever last touched the cron
+          case $EVENT in schedule|workflow_dispatch) echo "go=true" >> "$GITHUB_OUTPUT"; exit 0 ;; esac
           case $ACTOR in *"[bot]") echo "::notice::on-duty skipped this event: it came from an app. The next scheduled run looks at it."; exit 0 ;; esac
           echo "go=true" >> "$GITHUB_OUTPUT"
 
@@ -78,11 +83,11 @@ jobs:
           HAS_CLAUDE: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
           HAS_WRITE: ${{ secrets.GITHARD_TOKEN != '' }}
         run: |
-          missing=""
+          missing=""; them=it
           [ "$HAS_CLAUDE" = true ] || missing="ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN"
-          [ "$HAS_WRITE" = true ] || missing="${missing:+$missing, and }GITHARD_TOKEN"
+          [ "$HAS_WRITE" = true ] || { [ -n "$missing" ] && them=them; missing="${missing:+$missing, and }GITHARD_TOKEN"; }
           if [ -n "$missing" ]; then
-            echo "::notice::on-duty is off: this run can't see $missing. Add it under Settings > Secrets and variables > Actions."
+            echo "::notice::on-duty is off: this run can't see $missing. Add $them under Settings > Secrets and variables > Actions."
             exit 0
           fi
           echo "go=true" >> "$GITHUB_OUTPUT"
@@ -126,6 +131,7 @@ jobs:
           ACTED: ${{ steps.approved.outputs.acted }}
           ON_QUEUE: ${{ github.event.issue.title == 'Waiting for you' }}
           SPEND: ${{ vars.GITHARD_SPEND }}
+          SEEN: ${{ vars.GITHARD_SEEN }}
           BOT_TOKEN: ${{ secrets.GITHARD_TOKEN }} # only to ask GitHub who the bot is
         run: |
           mkdir -p "$RUNNER_TEMP/githard"
@@ -134,16 +140,27 @@ jobs:
           due=false; if bash .githard/skills/on-duty/act.sh "$REPO" "$RUNNER_TEMP/cfg" --release-due; then due=true; fi
           echo "release_due=$due" >> "$GITHUB_OUTPUT"
           if [ "$ON_QUEUE" = true ]; then echo "This event is in the Waiting for you issue, so Claude isn't needed."; exit 0; fi
-          if [ "$EVENT" = schedule ] && [ "$owed" = 0 ] && [ "$due" = false ] && [ "$ACTED" != true ]; then
+          if [ "$EVENT" = schedule ] && [ "$ACTED" != true ]; then
             # green PRs and fork runs waiting for approval, unless a card already names their head;
-            # a failed read counts as pending
-            pending=0
+            # a failed read (exit 2) always means run
+            pending=2; t=$RUNNER_TEMP/githard
             if bot=$(GH_TOKEN=$BOT_TOKEN gh api user --jq .login); then
-              bash .githard/skills/on-duty/pending.sh "$REPO" "$bot" || pending=$?
-            else pending=2; fi
-            if [ "$pending" = 1 ]; then
+              pending=0; bash .githard/skills/on-duty/pending.sh "$REPO" "$bot" > "$t/pending.txt" || pending=$?
+              cat "$t/pending.txt"
+            fi
+            if [ "$owed" = 0 ] && [ "$due" = false ] && [ "$pending" = 1 ]; then
               echo "Nothing is owed, pending or due, and no card was approved, so Claude isn't needed."
               exit 0
+            fi
+            # the same work Claude already looked at, unchanged, isn't worth paying for again
+            if [ "$owed" != 2 ] && [ "$pending" != 2 ]; then
+              echo "release_due=$due" > "$t/due.txt"
+              sig=$(bash .githard/skills/on-duty/pending.sh --sig "$t/unanswered.txt" "$t/pending.txt" "$t/due.txt")
+              echo "sig=$sig" >> "$GITHUB_OUTPUT"
+              if [ "$sig" = "$SEEN" ]; then
+                echo "Nothing has changed since Claude last looked (GITHARD_SEEN is $sig), so Claude isn't needed."
+                exit 0
+              fi
             fi
           fi
           cap=$(grep '^monthly_cap_usd=' "$RUNNER_TEMP/cfg" | cut -d= -f2-)
@@ -203,12 +220,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHARD_TOKEN }}
           EXEC: ${{ steps.claude.outputs.execution_file }}
           OUTCOME: ${{ steps.claude.outcome }}
+          SIG: ${{ steps.plan.outputs.sig }}
           SPEND: ${{ vars.GITHARD_SPEND }}
           MONTH: ${{ steps.plan.outputs.month }}
         run: |
-          # Claude could only write its proposals file; if anything else changed, trust none of it
-          if [ -n "$(git status --porcelain --untracked-files=all -- . ':!.githard')" ] || [ -n "$(git -C .githard status --porcelain --untracked-files=all)" ]; then
-            echo "::error::Files in the checkout changed while Claude ran, so on-duty won't run its scripts after it."
+          # this step runs only GitHard's scripts and reads no workspace file, so only .githard must be untouched
+          if [ -n "$(git -C .githard status --porcelain --untracked-files=all)" ]; then
+            echo "::error::GitHard's own files changed while Claude ran, so on-duty won't run its scripts after it."
             exit 1
           fi
           if [ -z "$EXEC" ] && [ "$OUTCOME" != success ]; then
@@ -222,6 +240,8 @@ jobs:
           fi
           gh variable set GITHARD_SPEND -R "$REPO" --body "$new"
           echo "This run cost about \$$cost. Spent this month: ${new#* }."
+          # remember what this scheduled run looked at, so an unchanged list doesn't wake Claude again
+          if [ -n "$SIG" ] && [ "$OUTCOME" = success ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi
 
       - name: Carry out the proposals
         if: always() && steps.claude.outcome == 'success'

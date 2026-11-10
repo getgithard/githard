@@ -59,7 +59,7 @@ Run `gh api repos/OWNER/REPO/rules/branches/DEFAULT --jq '[.[] | select(.type ==
 3. Write `.github/githard.yml` with their answers, and run `bash ${CLAUDE_SKILL_DIR}/config.sh .github/githard.yml`. It must exit 0. Show them any warnings it prints.
 4. Open a PR with both files. Explain that nothing runs until it's merged and both secrets are set, and that every later change to the config is a reviewed PR too.
 
-Once it's merged, tell them where things will show up. Cards appear in a pinned issue called "Waiting for you". An approver lets one go with a 👍, or with a reply that says exactly `/approve <ID>`, using the ID printed at the foot of the card and nothing else in the reply. They can edit a draft reply before approving it. Each run's notices are in the Actions tab.
+Once it's merged, tell them where things will show up. Cards appear in a pinned issue called "Waiting for you". An approver lets one go with a 👍, or with a reply that says exactly `/approve <ID>`, using the ID printed at the foot of the card and nothing else in the reply. They can edit a draft reply before approving it. Each run's notices are in the Actions tab. on-duty keeps two repo variables of its own: `GITHARD_SPEND`, this month's running total for the cap, and `GITHARD_SEEN`, a short fingerprint of the work the last scheduled run looked at, so the schedule doesn't pay Claude to look at the same list twice. Deleting `GITHARD_SEEN` makes the next scheduled run look again.
 
 ### Audit an existing setup
 

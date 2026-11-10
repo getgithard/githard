@@ -124,6 +124,9 @@ validate() {
   case $kind in reply|react|assign|label|merge|close|approve-runs|release|publish|ask) ;; *) reason="unknown kind"; return 1 ;; esac
   jq -e '[.. | strings | select(contains("<!-- githard") or contains("<!-- /githard"))] | length == 0' <<<"$act" >/dev/null ||
     { reason="text carries a githard marker"; return 1; }
+  # a card's footer says /approve ID, so model text that says it could pass for a real footer
+  jq -e '[.. | strings | select(test("/approve [0-9a-f]{8}"; "i"))] | length == 0' <<<"$act" >/dev/null ||
+    { reason="text says /approve and a card ID"; return 1; }
   digits() { jq -e --arg k "$1" '.[$k] | (type == "number" and . == floor and . > 0) or (type == "string" and test("^[0-9]+$"))' <<<"$act" >/dev/null; }
   case $kind in
     react) digits comment_id || { reason="comment_id must be digits"; return 1; }; key=$cid ;;
