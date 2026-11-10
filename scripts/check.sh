@@ -126,4 +126,55 @@ printf 'identity: bot\nmonthly_cap_usd: 5\napprovers: [a b]\n' > "$s/appr.yml"
 rc=0; bash $cfg "$s/appr.yml" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh accepted approvers: [a b]"; fail=1; }
 rc=0; bash $cfg "$s/missing.yml" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "config.sh didn't exit 2 on a missing file"; fail=1; }
 rm -rf "$s"
+# on-duty gate.sh: what goes, what waits, and failing safe on bad config.
+gate=skills/on-duty/gate.sh; s=$(mktemp -d)
+cfgkv() { # mode chat count risky first -> CFG file path
+  printf 'mode=%s\nchat=%s\napprove_first_count=%s\nidentity=bot\nrisky_paths_need_human=%s\nwait_for_checks=\napprovers=\nmonthly_cap_usd=25\nfirst_timer_runs_per_day=%s\nrelease_after_days=7\n' "$1" "$2" "$3" "$4" "$5" > "$s/cfg"; echo "$s/cfg"; }
+gcase() { local want=$1 label=$2; shift 2; local got; got=$(bash $gate "$@" 2>&1 || true); [[ $got == "$want"* ]] || { echo "gate.sh $label: wanted '$want', got '$got'"; fail=1; }; }
+safe=$(cfgkv safe approve-first 5 true none); cp "$safe" "$s/safe"
+auto=$(cfgkv auto approve-first 5 true none); cp "$auto" "$s/auto"
+cfgkv safe auto 5 true none >/dev/null; cp "$s/cfg" "$s/safe-chat-auto"
+cfgkv safe approve 5 true none >/dev/null; cp "$s/cfg" "$s/safe-chat-approve"
+cfgkv auto approve-first 5 false none >/dev/null; cp "$s/cfg" "$s/auto-norisk"
+cfgkv safe approve-first 5 true 2 >/dev/null; cp "$s/cfg" "$s/limit2"
+printf '.github/workflows/ci.yml\n' > "$s/p-ci"; printf 'src/a.ts\n' > "$s/p-src"; printf 'src/a.ts\ngo.sum\n' > "$s/p-mixed"
+for k in ask settings; do gcase queue "$k in auto" decide "$s/auto" $k; done
+for m in safe auto; do gcase go "label in $m" decide "$s/$m" label; done
+for k in reply react assign; do
+  gcase go "$k in auto" decide "$s/auto" $k
+  gcase go "$k safe chat=auto" decide "$s/safe-chat-auto" $k
+  gcase queue "$k safe chat=approve" decide "$s/safe-chat-approve" $k
+  gcase queue "$k approve-first at 4" decide "$s/safe" $k --replies-approved 4
+  gcase go "$k approve-first at 5" decide "$s/safe" $k --replies-approved 5
+  gcase queue "$k approve-first, no count" decide "$s/safe" $k
+done
+gcase queue "merge in safe" decide "$s/safe" merge --paths "$s/p-src" --review-required false
+gcase go "merge src in auto" decide "$s/auto" merge --paths "$s/p-src" --review-required false
+gcase queue "merge workflow in auto" decide "$s/auto" merge --paths "$s/p-ci" --review-required false
+gcase queue "merge lockfile among others" decide "$s/auto" merge --paths "$s/p-mixed" --review-required false
+gcase go "merge workflow, risky off" decide "$s/auto-norisk" merge --paths "$s/p-ci" --review-required false
+gcase queue "merge review required" decide "$s/auto" merge --paths "$s/p-src" --review-required true
+gcase queue "merge without paths" decide "$s/auto" merge --review-required false
+gcase queue "merge without review flag" decide "$s/auto" merge --paths "$s/p-src"
+gcase queue "release breaking" decide "$s/auto" release --breaking true
+gcase go "release auto" decide "$s/auto" release --breaking false
+gcase queue "release safe" decide "$s/safe" release --breaking false
+for k in close approve-runs publish; do
+  gcase queue "$k safe" decide "$s/safe" $k
+  gcase go "$k auto" decide "$s/auto" $k
+done
+gcase "queue unknown kind" "unknown kind" decide "$s/auto" frobnicate
+gcase queue "missing CFG" decide "$s/nope" label
+printf 'mode=auto\n' > "$s/partial"; gcase queue "partial CFG" decide "$s/partial" label
+printf 'mode=yolo\nchat=auto\napprove_first_count=5\nrisky_paths_need_human=true\n' > "$s/garbled"; gcase queue "garbled mode" decide "$s/garbled" reply
+printf '<!-- githard -->\nhi\n' > "$s/b-marker"; printf 'hello\n' > "$s/b-plain"
+gcase skip "own marker" should-run "$s/safe" --assoc MEMBER --body-file "$s/b-marker" --runs-today 0
+gcase skip "first timer at limit" should-run "$s/limit2" --assoc FIRST_TIME_CONTRIBUTOR --body-file "$s/b-plain" --runs-today 2
+gcase skip "NONE at limit" should-run "$s/limit2" --assoc NONE --body-file "$s/b-plain" --runs-today 3
+gcase run "first timer under limit" should-run "$s/limit2" --assoc FIRST_TIMER --body-file "$s/b-plain" --runs-today 1
+gcase run "MEMBER at limit" should-run "$s/limit2" --assoc MEMBER --body-file "$s/b-plain" --runs-today 9
+gcase run "limit none" should-run "$s/safe" --assoc NONE --body-file "$s/b-plain" --runs-today 99
+gcase skip "should-run missing CFG" should-run "$s/nope" --assoc MEMBER --body-file "$s/b-plain" --runs-today 0
+gcase skip "should-run missing body" should-run "$s/safe" --assoc MEMBER --body-file "$s/nobody" --runs-today 0
+rm -rf "$s"
 exit $fail
