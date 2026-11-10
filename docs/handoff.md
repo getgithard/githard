@@ -190,3 +190,36 @@ Not ours, so leave them alone: a podman VM, a Playwright test server and a merge
 - A live test needs a scratch repo, or keyparity, with James's **own** Claude secret and PAT. Only James can choose to set that up.
 - Parked: an approved merge card that times out stays suppressed. Exit code 2 also means "some merges were deferred".
 - Watch for @O1sumitkumar's PR on keyparity#18 (fork, so read the diff before approving CI).
+
+## 2026-11-10 23:46 UTC: on-duty is on keyparity, waiting on one secret
+
+**Done:**
+- On-duty's setup PR is merged on keyparity (keyparity#29). It's in safe mode with `chat: approve`, `identity: maintainer` and `monthly_cap_usd: none`, and GitHard is pinned to `aa17b7b` on main, since no release includes on-duty yet. These are James's answers: his own account, every reply waits, no disclosure line, no cap.
+- On keyparity, `CLAUDE_CODE_OAUTH_TOKEN` is set with a real value (updated 23:14:32Z).
+- No `AI_POLICY.md` was added. With no policy, on-duty adds no bot line, which is the "no disclosure" James chose.
+
+**Waiting on James:**
+- `GITHARD_TOKEN` on keyparity still holds an **empty** value from 23:08:44Z. He lost the PAT and is making a new one. The steps he has:
+  1. Go to https://github.com/settings/personal-access-tokens, delete any old `githard keyparity` token, and click **Generate new token**.
+  2. Name it `githard keyparity`, with owner `keyparity` and only the `keyparity` repo. Give it Read and write on Contents, Issues, Pull requests, Actions and Variables.
+  3. Paste it with the pencil next to `GITHARD_TOKEN` at https://github.com/keyparity/keyparity/settings/secrets/actions, then click **Update secret**.
+- The GitHard setup PR #87 is open and green. Merging it was blocked for me, so James merges it, but only after keyparity works.
+
+**Next:**
+1. Check it's saved: `gh secret list -R keyparity/keyparity --json name,updatedAt`. `GITHARD_TOKEN` must be newer than 23:08:44Z.
+2. Start a run: `gh workflow run githard-on-duty.yml -R keyparity/keyparity`, then read its log with `gh run view --log`.
+3. Check the log against the live checklist in `~/Documents/GitHub/githard-on-duty/.superpowers/sdd/2026-11-10-on-duty/task-6-report.md` and `task-7-report.md`. The three to settle first:
+   - does `GH_TOKEN` survive the action's environment scrub;
+   - can the narrowed Write rule create the proposals file;
+   - can the job token read check status.
+4. Once keyparity works, do githard: merge #87, then set both secrets on `getgithard/githard`, with a second PAT owned by `getgithard`.
+
+**Gaps to fix:**
+- Neither repo's release flow works with on-duty. keyparity's `release.yml` needs `package.json` already bumped, and on-duty doesn't write code. githard's releases come from pushing a tag, so on-duty refuses them. In safe mode this only means a release card, so nothing is broken.
+- An approved merge card that times out isn't retried, and exit code 2 also means "some merges deferred". Both are parked.
+
+**Gotchas:**
+- Commands run with `! ` can't take typed input. `! gh secret set NAME` saved an empty secret three times, and `! claude setup-token` hung. James should set secrets on GitHub's secrets page and run `claude setup-token` in his own Terminal app. Never use `--body`, because the token would end up in the transcript.
+- Claude Code's safety check refuses to let me merge a PR that adds a spending workflow ("Merge Without Review"). James merges those himself.
+- `gh pr merge --delete-branch` switches the local clone to main, so a later `gh pr view` with no number fails. Name the PR number.
+- Nothing is running in the background.
