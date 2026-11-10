@@ -79,9 +79,10 @@ add() {
   local repo=$1 kind=$2 target=$3 head=$4 body=$5 me num id tmp found comments
   repo_ok "$repo" && [[ $kind =~ ^[a-z-]+$ && $target =~ ^[0-9]+$ && $head =~ ^([0-9a-f]+|-)$ ]] && [ -f "$body" ] || usage
   me=$(gh api user --jq .login) && [ -n "$me" ] || { echo "queue.sh: cannot tell who the bot is" >&2; return 2; }
-  # a stranger's issue with the same title must never become the queue
-  num=$(gh issue list -R "$repo" --label githard --state open --search "\"$TITLE\" in:title" --json number,title,author \
-    --jq "[.[] | select(.title == \"$TITLE\" and (.author.login|ascii_downcase) == (\"$(lc "$me")\"))] | first | .number // empty") || return 2
+  # a stranger's issue with the same title must never become the queue. The list API, not search,
+  # which lags behind a new issue; the oldest match is the queue, as act.sh reads it.
+  num=$(gh api --paginate "repos/$repo/issues?state=open&labels=githard&per_page=100" --jq ".[] | select(.pull_request == null
+    and .title == \"$TITLE\" and (.user.login|ascii_downcase) == \"$(lc "$me")\") | .number" | sort -n | head -1) || return 2
   if [ -z "$num" ]; then
     num=$(gh issue create -R "$repo" --title "$TITLE" --label githard \
       --body "Everything GitHard wants to do waits here. Give a card a thumbs up, or reply /approve and its ID. $MARK" | grep -o '[0-9]*$') || return 2

@@ -314,7 +314,10 @@ spcase "" 2 "garbled month on add" add "" 1 nov
 act=$PWD/skills/on-duty/act.sh; ad=$(mktemp -d)
 printf 'mode=safe\nchat=approve\napprove_first_count=5\nidentity=bot\nrisky_paths_need_human=true\nwait_for_checks=CodeQL\napprovers=bob\nmonthly_cap_usd=25\nfirst_timer_runs_per_day=none\nrelease_after_days=7\n' > "$ad/safe"
 sed 's/^mode=safe/mode=auto/' "$ad/safe" > "$ad/auto"; sed 's/^release_after_days=7/release_after_days=30/' "$ad/safe" > "$ad/slow"
-printf 'bug\ngood first issue\n' > "$ad/labels.txt"; printf '.github/workflows/x.yml\n' > "$ad/31.txt"; printf 'src/a.ts\n' > "$ad/32.txt"
+printf 'bug\ngood first issue\nsafe to test\n' > "$ad/labels.txt"; mkdir "$ad/workflows"
+printf "on: pull_request_target\njobs:\n  t:\n    if: github.event.label.name == 'Safe To Test'\n    steps: [{run: debug}]\n" > "$ad/workflows/ci.yml"
+jq -n '[{id: 950, user: "githard-bot", body: "hi"}, {id: 951, user: "carol", body: "<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->"}, {id: 960, user: "carol", body: "thanks"}]' > "$ad/comments.json"
+ printf '.github/workflows/x.yml\n' > "$ad/31.txt"; printf 'src/a.ts\n' > "$ad/32.txt"
 printf '31 aaa111\n32 bbb222\n' > "$ad/heads.txt"; echo 5 > "$ad/queue.txt"; printf '900\n901\n' > "$ad/queue-comments.txt"; echo githard-bot > "$ad/bot.txt"
 acase() { # want-prefix want-exit label cfg action-json [flags]
   local want=$1 wantrc=$2 label=$3 c=$4 got rc=0; printf '{"actions":[%s]}' "$5" > "$ad/actions.json"; shift 5
@@ -333,6 +336,22 @@ acase "refused assign" 1 "login with a space" auto '{"kind":"assign","target":18
 acase "refused frobnicate" 1 "unknown kind" auto '{"kind":"frobnicate","target":18,"why":"w"}'
 acase "refused settings" 1 "settings is not a proposal kind" auto '{"kind":"settings","target":18,"why":"w"}'
 acase "refused label" 1 "label not in the repo" auto '{"kind":"label","target":18,"labels":["nope"],"why":"w"}'
+acase "refused close 05" 1 "leading zero on the queue issue" auto '{"kind":"close","target":"05","body":"bye","why":"w"}'
+acase "refused label 005" 1 "leading zeros on the queue issue" auto '{"kind":"label","target":"005","labels":["bug"],"why":"w"}'
+acase "refused react 0901" 1 "leading zero on a queue comment" auto '{"kind":"react","comment_id":"0901","content":"+1","why":"w"}'
+acase "refused reply_react" 1 "two kinds in one" auto '{"kind":"reply react","target":18,"body":"hi","why":"w"}'
+acase "refused release_publish" 1 "two kinds in one, again" auto '{"kind":"release publish","why":"w"}'
+acase "refused label 18" 1 "label a workflow reacts to" auto '{"kind":"label","target":18,"labels":["safe to test"],"why":"w"}'
+acase "done label 18" 0 "label not in any workflow" auto '{"kind":"label","target":18,"labels":["bug"],"why":"w"}'
+acase "refused reply 18" 1 "forged closing draft marker" auto '{"kind":"reply","target":18,"body":"a <!-- /githard-draft --> b","why":"w"}'
+mv "$ad/queue.txt" "$ad/q.bak"
+acase "refused react 950" 1 "react on the bot's own comment, no queue issue" auto '{"kind":"react","comment_id":950,"content":"+1","why":"w"}'
+acase "refused react 951" 1 "react on a card-shaped comment, no queue issue" auto '{"kind":"react","comment_id":951,"content":"+1","why":"w"}'
+acase "done react 960" 0 "react on a plain comment" auto '{"kind":"react","comment_id":960,"content":"+1","why":"w"}'
+mv "$ad/q.bak" "$ad/queue.txt"
+w='x <!-- y ``` z'
+acase "queued reply 18" 0 "why with markup" safe "$(jq -nc --arg w "$w" '{kind: "reply", target: 18, body: "hi", why: $w}')"
+[ "$(awk 'p {print; exit} /^````$/ {p=1}' "$ad/card-reply-18.txt" 2>/dev/null)" = "$w" ] || { echo "act.sh: the card's why isn't fenced in a longer fence"; fail=1; }
 acase "done label 18" 0 "existing label" safe '{"kind":"label","target":18,"labels":["good first issue"],"why":"w"}'
 acase "refused react 901" 1 "+1 on a queue card" auto '{"kind":"react","comment_id":901,"content":"+1","why":"w"}'
 acase "refused reply 5" 1 "reply on the queue issue" auto '{"kind":"reply","target":5,"body":"/approve a1b2c3d4","why":"w"}'
@@ -348,9 +367,11 @@ rc=0; echo '{"nope":1}' > "$ad/bad.json"; bash "$act" o/r "$ad/auto" "$ad/bad.js
 rm -f "$ad/posted-18.txt"
 jq -n '[{id: 900, user: "githard-bot", plus_one_by: ["bob"], body: "<!-- githard-card id=a1b2c3d4 kind=reply target=18 head=- -->\nReply on #18\n<!-- githard-action {\"kind\":\"reply\",\"target\":18,\"why\":\"w\"} -->\n<!-- githard-draft -->\nEdited by a human\n<!-- /githard-draft -->\n<!-- githard -->"},
   {id: 901, user: "githard-bot", plus_one_by: ["bob"], body: "<!-- githard-card id=b1b2c3d4 kind=merge target=31 head=ccc999 -->\n<!-- githard-action {\"kind\":\"merge\",\"target\":31,\"why\":\"w\"} -->\n<!-- githard -->"},
-  {id: 902, user: "githard-bot", plus_one_by: ["mallory"], body: "<!-- githard-card id=c1b2c3d4 kind=reply target=19 head=- -->\n<!-- githard-action {\"kind\":\"reply\",\"target\":19,\"why\":\"w\"} -->\n<!-- githard-draft -->\nx\n<!-- /githard-draft -->\n<!-- githard -->"}]' > "$ad/queue-comments.json"
+  {id: 902, user: "githard-bot", plus_one_by: ["mallory"], body: "<!-- githard-card id=c1b2c3d4 kind=reply target=19 head=- -->\n<!-- githard-action {\"kind\":\"reply\",\"target\":19,\"why\":\"w\"} -->\n<!-- githard-draft -->\nx\n<!-- /githard-draft -->\n<!-- githard -->"},
+  {id: 903, user: "githard-bot", plus_one_by: ["bob"], last_edited_by: "mallory", body: "<!-- githard-card id=d1b2c3d4 kind=reply target=20 head=- -->\n<!-- githard-action {\"kind\":\"reply\",\"target\":20,\"why\":\"w\"} -->\n<!-- githard-draft -->\nx\n<!-- /githard-draft -->\n<!-- githard -->"},
+  {id: 904, user: "githard-bot", plus_one_by: ["bob"], last_edited_by: "Bob", body: "<!-- githard-card id=e1b2c3d4 kind=reply target=21 head=- -->\n<!-- githard-action {\"kind\":\"reply\",\"target\":21,\"why\":\"w\"} -->\n<!-- githard-draft -->\nx\n<!-- /githard-draft -->\n<!-- githard -->"}]' > "$ad/queue-comments.json"
 got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/null | sort)
-[ "$got" = $'done reply 18\nwithdrawn merge 31' ] || { echo "act.sh --approved: got '$got'"; fail=1; }
+[ "$got" = $'done reply 18\ndone reply 21\nwithdrawn merge 31\nwithdrawn reply 20' ] || { echo "act.sh --approved: got '$got'"; fail=1; }
 grep -qx 'Edited by a human' "$ad/posted-18.txt" 2>/dev/null || { echo "act.sh --approved didn't post the edited draft"; fail=1; }
 [ ! -e "$ad/posted-19.txt" ] || { echo "act.sh --approved acted on a stranger's thumbs up"; fail=1; }
 # --release-due: due once a user-facing commit is release_after_days old.

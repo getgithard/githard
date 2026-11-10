@@ -8,15 +8,15 @@
 # Prints "done KIND TARGET", "queued KIND TARGET ID", "withdrawn KIND TARGET" or "refused KIND TARGET why".
 # Exit 0 all done or queued, 1 something refused or failed, 2 bad command line or unreadable input.
 # --dry-run never calls gh. It reads facts from DIR: <pr>.txt (changed files), heads.txt ("pr sha"
-# lines), labels.txt, queue.txt (queue issue number), queue-comments.txt (its comment ids),
-# queue-comments.json (for --approved, as queue.sh parse reads it), bot.txt (bot login) and
-# replies-approved.txt. It writes each body it would post to DIR/posted-<target>.txt, and skips verify-release.sh.
+# lines), labels.txt, workflows/ (stands in for .github/workflows), queue.txt (queue issue number),
+# queue-comments.txt (its comment ids), comments.json ([{id, user, body}] for comments reacted to),
+# queue-comments.json (for --approved, as queue.sh parse reads it, plus last_edited_by), bot.txt and
+# replies-approved.txt. It writes DIR/posted-<target>.txt and DIR/card-<kind>-<target>.txt, and skips verify-release.sh.
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd); skills=$(dirname "$here")
-KINDS=" reply react assign label merge close approve-runs release publish ask "
 MAX=20 # proposals per run; a steered model shouldn't get to spam
-usage() { sed -n '2,13p' "$0" >&2; exit 2; }
+usage() { sed -n '2,14p' "$0" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 repo=$1; cfg=$2; sub=$3; shift 3
 [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] && [ -f "$cfg" ] || usage
@@ -60,10 +60,11 @@ if [ -n "$dry" ]; then bot=$(rd bot.txt); else bot=$(gh api user --jq .login); f
 [[ $bot =~ ^[A-Za-z0-9-]+(\[bot\])?$ ]] || { echo "act.sh: cannot tell who the bot is" >&2; exit 2; }
 find_queue() {
   if [ -n "$dry" ]; then qnum=$(rd queue.txt | tr -d '[:space:]'); return 0; fi
-  qnum=$(gh issue list -R "$repo" --label githard --state open --search '"Waiting for you" in:title' --json number,title,author \
-    --jq "[.[] | select(.title == \"Waiting for you\" and (.author.login|ascii_downcase) == \"$(printf '%s' "$bot" | tr '[:upper:]' '[:lower:]')\")] | first | .number // empty") ||
+  # the list API, not search, which lags behind a newly created issue; the oldest one is the queue
+  qnum=$(gh api --paginate "repos/$repo/issues?state=open&labels=githard&per_page=100" --jq ".[] | select(.pull_request == null and .title == \"Waiting for you\"
+    and (.user.login|ascii_downcase) == \"$(printf '%s' "$bot" | tr '[:upper:]' '[:lower:]')\") | .number" | sort -n | head -1) ||
     { echo "act.sh: couldn't look for the queue issue" >&2; exit 2; }
-  [[ -z $qnum || $qnum =~ ^[0-9]+$ ]] || exit 2
+  [[ -z $qnum || $qnum =~ ^[1-9][0-9]*$ ]] || exit 2
 }
 find_queue
 
@@ -75,17 +76,18 @@ pr_head() {
   [ "$(jq -r .base.ref <<<"$pull")" = "$(gh api "repos/$repo" --jq .default_branch)" ] || return 1
   jq -r 'select(.state == "open") | .head.sha' <<<"$pull" | grep -E '^[0-9a-f]{40}$'
 }
-pr_paths() { # writes the full changed-file list, renames' old names too, to $2; nothing on failure
-  : > "$2"
-  if [ -n "$dry" ]; then [ -f "$dir/$1.txt" ] && cp "$dir/$1.txt" "$2"; return 0; fi
-  local n rows
-  n=$(gh api "repos/$repo/pulls/$1" --jq .changed_files) || return 0
-  rows=$(gh api --paginate "repos/$repo/pulls/$1/files" --jq '.[] | "\(.filename)\t\(.previous_filename // "")"') || return 0
+pr_paths() { # writes PR $1's changed files at pinned head $2, renames' old names too, to $3; nothing on failure
+  : > "$3"
+  if [ -n "$dry" ]; then [ -f "$dir/$1.txt" ] && cp "$dir/$1.txt" "$3"; return 0; fi
+  local n rows base
+  read -r n base < <(gh api "repos/$repo/pulls/$1" --jq '"\(.changed_files) \(.base.ref)"') || return 0
+  # keyed by the pinned commit, so a push after the head was read can't swap the list
+  rows=$(gh api --paginate "repos/$repo/compare/$base...$2" --jq '.files[]? | "\(.filename)\t\(.previous_filename // "")"') || return 0
   # GitHub stops listing at 3000 files; a short list must not pass as the whole list
   [ "$(printf '%s\n' "$rows" | wc -l | tr -d ' ')" = "$n" ] || return 0
-  printf '%s\n' "$rows" | tr '\t' '\n' | sed '/^$/d' > "$2"
+  printf '%s\n' "$rows" | tr '\t' '\n' | sed '/^$/d' > "$3"
 }
-review_rule() {
+review_rule() { # rulesets only: classic branch protection isn't read here, but gh pr merge still enforces it
   if [ -n "$dry" ]; then printf '%s' "$review"; return; fi
   local base; base=$(gh api "repos/$repo/pulls/$1" --jq .base.ref) || return 1
   gh api "repos/$repo/rules/branches/$base" --jq '[.[] | select(.type == "pull_request") | .parameters.required_approving_review_count] | (max // 0) > 0'
@@ -94,11 +96,22 @@ labels_known() {
   [ -f "$tmp/labels" ] || { if [ -n "$dry" ]; then rd labels.txt; else gh label list -R "$repo" --limit 1000 --json name --jq '.[].name'; fi; } > "$tmp/labels" || return 1
   cat "$tmp/labels"
 }
-queue_comment() { # is comment $1 in the queue issue? errs on the side of yes
-  [ -n "$qnum" ] || return 1
-  if [ -n "$dry" ]; then rd queue-comments.txt | grep -qx "$1"; return; fi
-  local url; url=$(gh api "repos/$repo/issues/comments/$1" --jq .issue_url) || return 0
-  [[ $url == */issues/"$qnum" ]]
+queue_comment() { # could a reaction on comment $1 approve a card? errs on the side of yes
+  local c b; b=$(printf '%s' "$bot" | tr '[:upper:]' '[:lower:]')
+  if [ -n "$dry" ]; then
+    [ -n "$qnum" ] && rd queue-comments.txt | grep -qx "$1" && return 0
+    c=$(jq -c --argjson id "$1" '.[] | select(.id == $id) | {issue_url: "", user: {login: .user}, body}' "$dir/comments.json" 2>/dev/null)
+    [ -n "$c" ] || return 1
+  else c=$(gh api "repos/$repo/issues/comments/$1") || return 0; fi
+  # the bot's own comments and anything card-shaped are off limits, queue issue known or not
+  local rc=0; jq -e --arg b "$b" --arg q "/issues/${qnum:-none}" '(.user.login|ascii_downcase) == $b
+    or (.body|startswith("<!-- githard-card")) or (.issue_url|endswith($q))' <<<"$c" >/dev/null || rc=$?
+  [ $rc != 1 ] # 0 is yes, 1 is no, anything else is unreadable, so yes
+}
+in_workflows() { # does label $1 appear in a workflow? a missing folder counts as yes
+  local w=.github/workflows; [ -n "$dry" ] && w=$dir/workflows
+  [ -d "$w" ] || return 0
+  grep -rqiwF -- "$1" "$w"
 }
 replies_approved() { if [ -n "$dry" ]; then rd replies-approved.txt; else gh variable get GITHARD_REPLIES_APPROVED -R "$repo" 2>/dev/null; fi; }
 
@@ -108,15 +121,17 @@ str() { jq -r --arg k "$1" 'if type == "object" then .[$k] else null end | if ty
 validate() {
   kind=$(str kind); target=$(str target); cid=$(str comment_id); key=""; reason=""
   login=$(str login); content=$(str content); tag=$(str tag); body=$(str body); title=$(str title); why=$(str why)
-  [[ $KINDS == *" $kind "* ]] || { reason="unknown kind"; return 1; }
-  jq -e '[.. | strings | select(contains("<!-- githard"))] | length == 0' <<<"$act" >/dev/null || { reason="text carries a githard marker"; return 1; }
+  case $kind in reply|react|assign|label|merge|close|approve-runs|release|publish|ask) ;; *) reason="unknown kind"; return 1 ;; esac
+  jq -e '[.. | strings | select(contains("<!-- githard") or contains("<!-- /githard"))] | length == 0' <<<"$act" >/dev/null ||
+    { reason="text carries a githard marker"; return 1; }
   digits() { jq -e --arg k "$1" '.[$k] | (type == "number" and . == floor and . > 0) or (type == "string" and test("^[0-9]+$"))' <<<"$act" >/dev/null; }
   case $kind in
     react) digits comment_id || { reason="comment_id must be digits"; return 1; }; key=$cid ;;
     release|publish|ask) key=0 ;;
     *) digits target || { reason="target must be digits"; return 1; }; key=$target ;;
   esac
-  [[ $key =~ ^[0-9]+$ ]] || { reason="target must be digits"; return 1; } # whatever jq's regex flavour
+  # canonical numbers only: "05" must not slip past the queue-issue check for #5
+  [ "$key" = 0 ] || [[ $key =~ ^[1-9][0-9]{0,17}$ ]] || { reason="target must be a plain number"; return 1; }
   [ "$key" = 0 ] || [ "$key" != "$qnum" ] || [ "$kind" = react ] || { reason="that's the Waiting for you issue"; return 1; }
   case $kind in
     react) [[ " +1 rocket eyes hooray heart " == *" $content "* ]] || { reason="reaction not allowed"; return 1; }
@@ -125,7 +140,8 @@ validate() {
     label) labels=$(jq -r '.labels | if type == "array" and length > 0 and all(type == "string") then .[] else error end' <<<"$act" 2>/dev/null) ||
         { reason="labels must be a list of names"; return 1; }
       labels_known > "$tmp/known" || { reason="couldn't read the repo's labels"; return 1; }
-      while IFS= read -r l; do grep -qxF -- "$l" "$tmp/known" || { reason="label doesn't exist in the repo"; return 1; }; done <<<"$labels" ;;
+      while IFS= read -r l; do grep -qxF -- "$l" "$tmp/known" || { reason="label doesn't exist in the repo"; return 1; }
+        ! in_workflows "$l" || { reason="a workflow reacts to that label"; return 1; }; done <<<"$labels" ;;
     reply|close) [ -n "$body" ] && [ ${#body} -le 60000 ] || { reason="body is empty or too long"; return 1; } ;;
     publish) [[ $tag =~ ^([A-Za-z0-9-]+--)?v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { reason="not a version tag"; return 1; } ;;
     ask) [ -n "$title" ] && [ -n "$body" ] || { reason="ask needs a title and a body"; return 1; } ;;
@@ -140,7 +156,7 @@ facts() {
       head=$(pr_head "$key") || { reason="couldn't read an open PR into the default branch"; return 1; } ;;
   esac
   case $kind in
-    merge) pr_paths "$key" "$tmp/paths"; g=(--paths "$tmp/paths")
+    merge) pr_paths "$key" "$head" "$tmp/paths"; g=(--paths "$tmp/paths")
       local r; r=$(review_rule "$key") && [[ $r =~ ^(true|false)$ ]] && g+=(--review-required "$r") ;;
     reply|react|assign) local n; n=$(replies_approved) && [[ $n =~ ^[0-9]+$ ]] && g=(--replies-approved "$n") ;;
     release) local rc=0; release_facts || rc=$?
@@ -167,7 +183,7 @@ execute() {
       ex gh api -X POST "repos/$repo/issues/$key/labels" "${a[@]}" ;;
     merge) IFS=, read -ra checks <<<"$(get wait_for_checks)"
       for c in ${checks[@]+"${checks[@]}"}; do a+=(--require "$c"); done
-      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" ${a[@]+"${a[@]}"} ;;
+      ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --timeout-min 20 ${a[@]+"${a[@]}"} ;;
     approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" ;;
     release) ex gh workflow run release.yml -R "$repo" -f "version=${version##*v}" ;; # builds a draft, never publishes
     publish) ex gh release edit "$tag" -R "$repo" --draft=false ;;
@@ -176,6 +192,11 @@ execute() {
 }
 shown() { case $kind in release) echo "${version:--}" ;; publish) echo "$tag" ;; ask) echo - ;; *) echo "$key" ;; esac; }
 
+fenced() { # model text on a card renders as inert code: the fence is longer than any backtick run inside
+  local n f='```'; n=$(printf '%s' "$1" | grep -oE '`+' | awk '{ if (length($0) > m) m = length($0) } END { print m + 0 }')
+  while [ ${#f} -le "$n" ]; do f+='`'; done
+  printf '%s\n%s\n%s\n\n' "$f" "$1" "$f"
+}
 queue_card() { # posts a card for the current action; prints its ID
   local line
   case $kind in
@@ -183,14 +204,15 @@ queue_card() { # posts a card for the current action; prints its ID
     react) line="React $content to comment $key" ;; assign) line="Assign #$key to @$login" ;;
     approve-runs) line="Approve the waiting CI runs on #$key at ${head:0:7}" ;;
     release) line="Release $version (a draft, for you to publish)" ;; publish) line="Publish the $tag release" ;;
-    ask) line="Question: $title" ;; *) line="$kind #$key" ;;
+    *) line="$kind #$key" ;;
   esac
-  { printf '**%s**\n\n%s\n\n' "$line" "$why"
-    [ "$kind" = ask ] && printf '%s\n\n' "$body"
+  [ "$kind" = ask ] && line="Question"
+  { printf '**%s**\n\n' "$line"
+    fenced "$why"; [ "$kind" = ask ] && fenced "$title"$'\n\n'"$body"
     printf '<!-- githard-action %s -->\n' "$(jq -c --arg v "${version:-}" 'del(.body) | if .kind == "release" then .version = $v else . end' <<<"$act")"
-    case $kind in reply|close) printf '<!-- githard-draft -->\n%s\n<!-- /githard-draft -->\n' "$body" ;; esac
+    case $kind in reply|close) fenced "<!-- githard-draft -->"$'\n'"$body"$'\n'"<!-- /githard-draft -->" ;; esac
   } > "$tmp/card"
-  if [ -n "$dry" ]; then echo dry-run; return 0; fi
+  if [ -n "$dry" ]; then cp "$tmp/card" "$dir/card-$kind-$key.txt"; echo dry-run; return 0; fi
   bash "$here/queue.sh" add "$repo" "$kind" "$key" "$head" "$tmp/card" | grep -E '^[0-9a-f]{8}$'
 }
 
@@ -221,8 +243,8 @@ if [ -n "$dry" ]; then
   approvers="${repo%%/*},$(get approvers)"
 else
   gh api --paginate --slurp "repos/$repo/issues/$qnum/comments" |
-    jq '[.[][] | {id, user: .user.login, body, plus: (.reactions["+1"] // 0)}]' > "$tmp/c0" || exit 2
-  cp "$tmp/c0" "$tmp/comments"
+    jq '[.[][] | {id, node_id, user: .user.login, body, plus: (.reactions["+1"] // 0)}]' > "$tmp/c0" || exit 2
+  jq 'map(del(.node_id))' "$tmp/c0" > "$tmp/comments"
   for id in $(jq -r '.[] | select(.plus > 0 and (.body | startswith("<!-- githard-card "))) | .id' "$tmp/c0"); do
     who=$(gh api --paginate -X GET "repos/$repo/issues/comments/$id/reactions" -f content=+1 --jq '[.[].user.login]' | jq -s 'add // []') || who='[]'
     jq --argjson id "$id" --argjson w "$who" 'map(if .id == $id then .plus_one_by = $w else . end)' "$tmp/comments" > "$tmp/c1" && mv "$tmp/c1" "$tmp/comments"
@@ -240,6 +262,15 @@ bash "$here/queue.sh" parse --approvers "$approvers" --bot "$bot" --heads "$tmp/
 out=0
 while read -r state _ ckind ctarget comment; do
   if [ "$state" = stale ]; then mark "$comment" "Withdrawn: the PR changed since this card was written."; echo "withdrawn $ckind $ctarget"; continue; fi
+  # an edit by someone who can't approve voids the approval; an unknown editor counts as that
+  if [ -n "$dry" ]; then editor=$(jq -r --argjson id "$comment" '.[] | select(.id == $id) | .last_edited_by // ""' "$tmp/comments")
+  else editor=$(gh api graphql -f query='query($id: ID!) { node(id: $id) { ... on IssueComment { lastEditedBy { login } } } }' \
+      -f id="$(jq -r --argjson id "$comment" '.[] | select(.id == $id) | .node_id' "$tmp/c0")" |
+      jq -er '.data.node | if . == null then error else (.lastEditedBy.login // "") end') || editor="?"; fi
+  e=$(printf '%s' "$editor" | tr '[:upper:]' '[:lower:]')
+  if [ -n "$e" ] && [[ ",$(printf '%s' "$bot,$approvers" | tr '[:upper:]' '[:lower:]')," != *",$e,"* ]]; then
+    mark "$comment" "Withdrawn: someone who can't approve edited this card."; echo "withdrawn $ckind $ctarget"; continue
+  fi
   text=$(jq -r --argjson id "$comment" '.[] | select(.id == $id) | .body' "$tmp/comments")
   act=$(printf '%s\n' "$text" | sed -n 's/^<!-- githard-action \(.*\) -->$/\1/p' | head -1)
   if [[ $ckind == reply || $ckind == close ]]; then # the card's current draft, so a maintainer's edit is what goes out
