@@ -281,4 +281,33 @@ qhas 0 "same ask body dedupes" "[$a1]" ask 0 0123456789ab
 qhas 1 "different ask body is its own card" "[$a1]" ask 0 ba9876543210
 rm -rf "$qd"
 rm -rf "$s"
+# on-duty spend.sh: the monthly cap, and failing safe on garbled input.
+sp=skills/on-duty/spend.sh
+spcase() {
+  local want=$1 wantrc=$2 label=$3 out rc=0; shift 3
+  out=$(bash $sp "$@" 2>/dev/null) || rc=$?
+  { [ "$out" = "$want" ] && [ $rc = "$wantrc" ]; } || { echo "spend.sh $label: want '$want' exit $wantrc, got '$out' exit $rc"; fail=1; }
+}
+spcase ok 0 "under the cap" check "2026-11 19.99" 20 2026-11
+spcase over 0 "at the cap" check "2026-11 20.00" 20 2026-11
+spcase over 0 "decimal cap" check "2026-11 0.50" 0.5 2026-11
+spcase ok 0 "earlier month counts as 0" check "2026-10 99" 20 2026-11
+spcase ok 0 "empty state" check "" 20 2026-11
+spcase ok 0 "no cap" check "" none 2026-11
+spcase ok 0 "no cap, big total" check "2026-11 999" none 2026-11
+spcase "" 2 "garbled state" check "banana" 20 2026-11
+spcase "" 2 "negative amount in state" check "2026-11 -3" 20 2026-11
+spcase "" 2 "zero cap" check "" 0 2026-11
+spcase "" 2 "garbled cap" check "" abc 2026-11
+spcase "" 2 "garbled month" check "" 20 2026-13
+spcase "" 2 "missing args" check
+spcase "" 2 "unknown subcommand" frob a b c
+spcase "2026-11 1.23" 0 "new month resets, rounds" add "2026-10 5" 1.234 2026-11
+spcase "2026-11 6.50" 0 "adds in the same month" add "2026-11 5.25" 1.25 2026-11
+spcase "2026-11 2.00" 0 "empty state adds" add "" 2 2026-11
+spcase "2026-11 2.00" 0 "garbled state counts as 0" add "banana" 2 2026-11
+[ -n "$(bash $sp add banana 2 2026-11 2>&1 >/dev/null)" ] || { echo "spend.sh add: no warning on garbled state"; fail=1; }
+spcase "" 2 "garbled cost" add "" abc 2026-11
+spcase "" 2 "negative cost" add "" -1 2026-11
+spcase "" 2 "garbled month on add" add "" 1 nov
 exit $fail
