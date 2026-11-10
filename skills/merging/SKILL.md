@@ -12,15 +12,16 @@ The reasons behind each rule are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
 ## One PR
 
 ```sh
-bash ${CLAUDE_SKILL_DIR}/merge-when-green.sh OWNER/REPO <PR> [--method squash] [--timeout-min 60]
+bash ${CLAUDE_SKILL_DIR}/merge-when-green.sh OWNER/REPO <PR> [--method squash] [--timeout-min 60] [--require NAME]... [--head SHA]
 ```
 
 - It reads the required checks from the base branch's ruleset, so nothing's hard-coded. A hard-coded list makes PRs in other repos wait out the full timeout for a check that never runs.
 - It merges with `--match-head-commit`, so a push that lands after the checks pass can't slip in.
+- `--require` adds a check you want on top of the ruleset's, like CodeQL. `--head` pins the commit you reviewed: if the PR's head is anything else, it refuses and exits 2.
 - If a required check fails, it reads the failed job's log. When every failure looks like a download flake (a 5xx, a timeout, a reset, DNS), it reruns only the failed jobs, at most twice. Anything else is a real failure: it stops and says which check.
 - An empty or failed answer from GitHub means "unknown, ask again", never "done".
 
-Exit 0 means merged. Exit 1 means a real failure or a timeout. Exit 2 means it refused (a fork PR) or couldn't read the PR or the ruleset.
+Exit 0 means merged. Exit 1 means a real failure or a timeout. Exit 2 means it refused (a fork PR, or a head that moved off `--head`) or couldn't read the PR or the ruleset.
 
 ## Several PRs
 

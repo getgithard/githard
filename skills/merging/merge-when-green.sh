@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Merge one PR once every check its branch's ruleset requires has passed on the PR's current head.
-# Usage: bash merge-when-green.sh OWNER/REPO PR [--method squash|merge|rebase] [--timeout-min 60]
+# Usage: bash merge-when-green.sh OWNER/REPO PR [--method squash|merge|rebase] [--timeout-min 60] [--require NAME]... [--head SHA]
 #        bash merge-when-green.sh --classify < failed-job.log
+# --require adds a check to the ruleset's required ones. --head refuses to merge any other head commit.
 # Reruns failed jobs only when every failure looks like a download flake (a 5xx, a timeout, a reset),
 # at most twice. Anything else is a real failure: it stops and says so.
 # Exit: 0 merged, 1 real failure or timeout, 2 refused or GitHub didn't answer.
@@ -17,9 +18,15 @@ if [ "${1:-}" = --classify ]; then grep -qiE "$FLAKE" && echo flake || echo real
 repo=${1:?usage: bash merge-when-green.sh OWNER/REPO PR [--method squash] [--timeout-min 60]}
 pr=${2:?usage: bash merge-when-green.sh OWNER/REPO PR [--method squash] [--timeout-min 60]}
 shift 2
-method=squash; timeout_min=60
+method=squash; timeout_min=60; extra=""; want_head=""
 while [ $# -gt 0 ]; do
-  case $1 in --method) method=$2; shift 2 ;; --timeout-min) timeout_min=$2; shift 2 ;; *) echo "unknown option $1"; exit 2 ;; esac
+  [ $# -ge 2 ] || { echo "option $1 has no value"; exit 2; }
+  case $1 in
+    --method) method=$2 ;; --timeout-min) timeout_min=$2 ;; --head) want_head=$2 ;;
+    --require) extra="$extra$2"$'\n' ;;
+    *) echo "unknown option $1"; exit 2 ;;
+  esac
+  shift 2
 done
 
 say() { echo "#$pr: $*"; }
@@ -42,6 +49,7 @@ base=$(jq -r .base.ref <<<"$pull")
 required=$(gh api "repos/$repo/rules/branches/$base" \
   --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique | .[]' 2>/dev/null) ||
   { say "unknown: couldn't read the ruleset for $base"; exit 2; }
+required=$(printf '%s\n%s' "$required" "$extra" | sed '/^$/d' | sort -u)
 [ -n "$required" ] || say "no required checks on $base, so it merges once nothing is failing"
 reruns=0; deadline=$(( $(date +%s) + timeout_min * 60 ))
 
@@ -53,6 +61,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
     *closed) say "closed without merging"; exit 1 ;;
   esac
   head=$(jq -r .head.sha <<<"$pull")
+  [ -z "$want_head" ] || [ "$head" = "$want_head" ] || { say "head moved to ${head:0:7}, not merging"; exit 2; }
   runs=$(gh api "repos/$repo/commits/$head/check-runs?per_page=100" \
     --jq '.check_runs[] | [.name, .status, (.conclusion // "-"), (try (.details_url | capture("runs/(?<id>[0-9]+)").id) catch "-")] | @tsv' 2>/dev/null) ||
     { sleep 30; continue; }

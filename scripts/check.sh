@@ -310,4 +310,55 @@ spcase "2026-11 2.00" 0 "garbled state counts as 0" add "banana" 2 2026-11
 spcase "" 2 "garbled cost" add "" abc 2026-11
 spcase "" 2 "negative cost" add "" -1 2026-11
 spcase "" 2 "garbled month on add" add "" 1 nov
+# on-duty act.sh in --dry-run: validation, injection, the gate and approved cards, with no gh calls.
+act=$PWD/skills/on-duty/act.sh; ad=$(mktemp -d)
+printf 'mode=safe\nchat=approve\napprove_first_count=5\nidentity=bot\nrisky_paths_need_human=true\nwait_for_checks=CodeQL\napprovers=bob\nmonthly_cap_usd=25\nfirst_timer_runs_per_day=none\nrelease_after_days=7\n' > "$ad/safe"
+sed 's/^mode=safe/mode=auto/' "$ad/safe" > "$ad/auto"; sed 's/^release_after_days=7/release_after_days=30/' "$ad/safe" > "$ad/slow"
+printf 'bug\ngood first issue\n' > "$ad/labels.txt"; printf '.github/workflows/x.yml\n' > "$ad/31.txt"; printf 'src/a.ts\n' > "$ad/32.txt"
+printf '31 aaa111\n32 bbb222\n' > "$ad/heads.txt"; echo 5 > "$ad/queue.txt"; printf '900\n901\n' > "$ad/queue-comments.txt"; echo githard-bot > "$ad/bot.txt"
+acase() { # want-prefix want-exit label cfg action-json [flags]
+  local want=$1 wantrc=$2 label=$3 c=$4 got rc=0; printf '{"actions":[%s]}' "$5" > "$ad/actions.json"; shift 5
+  got=$(bash "$act" o/r "$ad/$c" "$ad/actions.json" --dry-run --paths-from "$ad" "$@" 2>/dev/null) || rc=$?
+  { [[ $got == "$want"* ]] && [ $rc = "$wantrc" ]; } || { echo "act.sh $label: want '$want...' exit $wantrc, got '$got' exit $rc"; fail=1; }
+}
+acase "queued reply 18" 0 "reply in safe, chat=approve" safe '{"kind":"reply","target":18,"body":"hi","why":"w"}'
+acase "queued merge 31" 0 "auto merge touching a workflow" auto '{"kind":"merge","target":31,"why":"w"}' --review-required false
+acase "done merge 32" 0 "auto merge of plain source" auto '{"kind":"merge","target":32,"why":"w"}' --review-required false
+acase "queued merge 32" 0 "auto merge, review state unknown" auto '{"kind":"merge","target":32,"why":"w"}'
+acase "refused merge 40" 1 "merge with no known head" auto '{"kind":"merge","target":40,"why":"w"}' --review-required false
+acase "refused reply 12__rm_-rf__" 1 "target injection" auto '{"kind":"reply","target":"12; rm -rf /","body":"hi","why":"w"}'
+acase "refused publish" 1 "tag injection" auto '{"kind":"publish","tag":"v1 && x","why":"w"}'
+acase "refused react" 1 "reaction -1" auto '{"kind":"react","comment_id":7,"content":"-1","why":"w"}'
+acase "refused assign" 1 "login with a space" auto '{"kind":"assign","target":18,"login":"a b","why":"w"}'
+acase "refused frobnicate" 1 "unknown kind" auto '{"kind":"frobnicate","target":18,"why":"w"}'
+acase "refused settings" 1 "settings is not a proposal kind" auto '{"kind":"settings","target":18,"why":"w"}'
+acase "refused label" 1 "label not in the repo" auto '{"kind":"label","target":18,"labels":["nope"],"why":"w"}'
+acase "done label 18" 0 "existing label" safe '{"kind":"label","target":18,"labels":["good first issue"],"why":"w"}'
+acase "refused react 901" 1 "+1 on a queue card" auto '{"kind":"react","comment_id":901,"content":"+1","why":"w"}'
+acase "refused reply 5" 1 "reply on the queue issue" auto '{"kind":"reply","target":5,"body":"/approve a1b2c3d4","why":"w"}'
+acase "refused reply 18" 1 "forged githard marker" auto '{"kind":"reply","target":18,"body":"<!-- githard-draft -->","why":"w"}'
+acase "refused reply 12_" 1 "target with a newline" auto '{"kind":"reply","target":"12\n::warning::x","body":"hi","why":"w"}'
+acase "refused reply 18" 1 "target as a float" auto '{"kind":"reply","target":18.5,"body":"hi","why":"w"}'
+acase "queued ask" 0 "ask always waits" auto '{"kind":"ask","title":"t","body":"b","why":"w"}'
+acase "done reply 18" 0 "reply in auto" auto '{"kind":"reply","target":18,"body":"hi","why":"w"}'
+tail -1 "$ad/posted-18.txt" | grep -qx '<!-- githard -->' || { echo "act.sh: posted reply lacks the githard marker"; fail=1; }
+rc=0; echo '{"nope":1}' > "$ad/bad.json"; bash "$act" o/r "$ad/auto" "$ad/bad.json" --dry-run --paths-from "$ad" >/dev/null 2>&1 || rc=$?
+[ $rc = 2 ] || { echo "act.sh took a file with no actions array: exit $rc"; fail=1; }
+# --approved: the human's edit to a draft is what goes out; a moved head withdraws the card.
+rm -f "$ad/posted-18.txt"
+jq -n '[{id: 900, user: "githard-bot", plus_one_by: ["bob"], body: "<!-- githard-card id=a1b2c3d4 kind=reply target=18 head=- -->\nReply on #18\n<!-- githard-action {\"kind\":\"reply\",\"target\":18,\"why\":\"w\"} -->\n<!-- githard-draft -->\nEdited by a human\n<!-- /githard-draft -->\n<!-- githard -->"},
+  {id: 901, user: "githard-bot", plus_one_by: ["bob"], body: "<!-- githard-card id=b1b2c3d4 kind=merge target=31 head=ccc999 -->\n<!-- githard-action {\"kind\":\"merge\",\"target\":31,\"why\":\"w\"} -->\n<!-- githard -->"},
+  {id: 902, user: "githard-bot", plus_one_by: ["mallory"], body: "<!-- githard-card id=c1b2c3d4 kind=reply target=19 head=- -->\n<!-- githard-action {\"kind\":\"reply\",\"target\":19,\"why\":\"w\"} -->\n<!-- githard-draft -->\nx\n<!-- /githard-draft -->\n<!-- githard -->"}]' > "$ad/queue-comments.json"
+got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/null | sort)
+[ "$got" = $'done reply 18\nwithdrawn merge 31' ] || { echo "act.sh --approved: got '$got'"; fail=1; }
+grep -qx 'Edited by a human' "$ad/posted-18.txt" 2>/dev/null || { echo "act.sh --approved didn't post the edited draft"; fail=1; }
+[ ! -e "$ad/posted-19.txt" ] || { echo "act.sh --approved acted on a stranger's thumbs up"; fail=1; }
+# --release-due: due once a user-facing commit is release_after_days old.
+g=$(mktemp -d); gc() { GIT_COMMITTER_DATE="$(( $(date +%s) - $1 * 86400 )) +0000" git -C "$g" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m "$2"; }
+git -C "$g" init -q; gc 20 'feat: first'
+rdue() { local rc=0; (cd "$g" && bash "$act" o/r "$ad/$2" --release-due >/dev/null 2>&1) || rc=$?; [ $rc = "$1" ] || { echo "act.sh --release-due $3: want exit $1, got $rc"; fail=1; }; }
+rdue 2 safe "with no tag"
+git -C "$g" -c tag.gpgsign=false tag v0.1.0; gc 10 'docs: words'; rdue 1 safe "with only docs"
+gc 10 'fix: a bug'; gc 1 'feat: new'; rdue 0 safe "with a 10-day-old fix"; rdue 1 slow "under a 30-day wait"
+rm -rf "$g" "$ad"
 exit $fail
