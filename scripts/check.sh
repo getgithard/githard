@@ -263,7 +263,8 @@ rc=0; echo '[]' | bash $q parse --approvers bob --bot githard-bot --heads "$qd/n
 rc=0; echo '[]' | bash $q parse --approvers bob --heads "$qd/heads" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "queue.sh parse ran without --bot"; fail=1; }
 qhas() { # want label json kind target head
   local want=$1 label=$2 json=$3 rc=0; shift 3
-  printf '%s' "$json" | bash $q has --bot githard-bot "$@" >/dev/null 2>&1 || rc=$?
+  local any=(); [ "${1:-}" = --any ] && { any=(--any); shift; }
+  printf '%s' "$json" | bash $q has ${any[@]+"${any[@]}"} --bot githard-bot "$@" >/dev/null 2>&1 || rc=$?
   [ $rc = "$want" ] || { echo "queue.sh has $label: want exit $want, got $rc"; fail=1; }
 }
 qhas 0 "open duplicate" "[$c2]" merge 7 aaa111
@@ -279,6 +280,12 @@ a1=$(card 10 githard-bot a1b2c3d4 ask 0 0123456789ab '' '["bob"]')
 qcase "approved a1b2c3d4 ask 0 10" "ask card with a hash head is not stale" "[$a1]"
 qhas 0 "same ask body dedupes" "[$a1]" ask 0 0123456789ab
 qhas 1 "different ask body is its own card" "[$a1]" ask 0 ba9876543210
+# --any also counts done cards, so an approved ask isn't posted again
+ad1=$(card 10 githard-bot a1b2c3d4 ask 0 0123456789ab '\n\n<!-- githard-done -->\nDone: noted.')
+qhas 1 "done ask without --any" "[$ad1]" ask 0 0123456789ab
+qhas 0 "done ask with --any" "[$ad1]" --any ask 0 0123456789ab
+qhas 0 "open card with --any" "[$c2]" --any merge 7 aaa111
+qhas 1 "stranger's done card with --any" "[$(card 10 mallory a1b2c3d4 ask 0 0123456789ab '\n\n<!-- githard-done -->\nDone.')]" --any ask 0 0123456789ab
 rm -rf "$qd"
 rm -rf "$s"
 # on-duty spend.sh: the monthly cap, and failing safe on garbled input.
@@ -399,6 +406,50 @@ git -C "$g" -c tag.gpgsign=false tag v0.1.0; gc 10 'docs: words'; rdue 1 safe "w
 gc 10 'fix: a bug'; gc 1 'feat: new'; rdue 0 safe "with a 10-day-old fix"; rdue 1 slow "under a 30-day wait"
 rm -rf "$g" "$ad"
 
+# unanswered.sh against a stand-in gh that answers "api [--paginate] PATH --jq F" from fixture files.
+ud=$(mktemp -d); mkdir "$ud/bin"
+cat > "$ud/bin/gh" <<'GH'
+#!/usr/bin/env bash
+# "api [--paginate] PATH" answers from <PATH>.json and "pr list" from pr_list.json, with any --jq applied
+if [ "$1" = api ]; then shift; [ "$1" = --paginate ] && shift; key=$1; else key="$1 $2"; fi
+f=$GH_FIXTURES/$(printf '%s' "$key" | tr -c 'A-Za-z0-9' _).json; [ -f "$f" ] || exit 1
+q=.; while [ $# -gt 0 ]; do [ "$1" = --jq ] && q=$2; shift; done
+jq -r "$q" "$f"
+GH
+chmod +x "$ud/bin/gh"
+fx() { printf '%s' "$2" > "$ud/$(printf '%s' "$1" | tr -c 'A-Za-z0-9' _).json"; }
+fx 'repos/o/r/pulls?state=open&per_page=100' '[]'
+fx 'repos/o/r' '{"full_name":"o/r"}'
+fx 'repos/o/r/issues?state=open&per_page=100' '[
+  {"number":5,"comments":0,"author_association":"NONE","user":{"login":"sam","type":"User"},"html_url":"u5"},
+  {"number":6,"comments":0,"author_association":"OWNER","user":{"login":"me","type":"User"},"html_url":"u6"},
+  {"number":7,"comments":0,"author_association":"NONE","user":{"login":"dependabot[bot]","type":"Bot"},"html_url":"u7"},
+  {"number":8,"comments":0,"author_association":"NONE","user":{"login":"pat","type":"User"},"html_url":"u8","pull_request":{}}]'
+got=$(GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash skills/contributors/unanswered.sh o/r 2>&1) && rc=0 || rc=$?
+{ [ $rc = 1 ] && [ "$got" = "unanswered  issue #5 @sam  u5" ]; } ||
+  { echo "unanswered.sh on a new outside issue with no comments: exit $rc, got '$got'"; fail=1; }
+# pending.sh: green PRs and waiting fork runs wake the schedule, unless a bot card names that head
+A=$(printf 'a%.0s' {1..40}); B=$(printf 'b%.0s' {1..40}); C=$(printf 'c%.0s' {1..40})
+fx 'repos/o/r/actions/runs?status=action_required&per_page=100' "{\"workflow_runs\":[{\"head_sha\":\"$A\"}]}"
+ok='[{"conclusion":"SUCCESS"},{"state":"SUCCESS"}]'
+fx 'pr list' "[{\"number\":3,\"isDraft\":false,\"headRefOid\":\"$B\",\"statusCheckRollup\":$ok},
+  {\"number\":4,\"isDraft\":false,\"headRefOid\":\"$C\",\"statusCheckRollup\":$ok},
+  {\"number\":5,\"isDraft\":true,\"headRefOid\":\"$C\",\"statusCheckRollup\":$ok},
+  {\"number\":6,\"isDraft\":false,\"headRefOid\":\"$C\",\"statusCheckRollup\":[{\"conclusion\":\"FAILURE\"}]},
+  {\"number\":7,\"isDraft\":false,\"headRefOid\":\"$C\",\"statusCheckRollup\":[{\"conclusion\":null,\"status\":\"IN_PROGRESS\"}]}]"
+fx 'repos/o/r/issues?state=open&labels=githard&per_page=100' '[{"number":2,"title":"Waiting for you","user":{"login":"Bot1"}}]'
+pcard() { printf '{"user":{"login":"%s"},"body":"<!-- githard-card id=a1b2c3d4 kind=%s target=%s head=%s -->\\nx\\n<!-- githard -->%s"}' "$@"; }
+fx 'repos/o/r/issues/2/comments?per_page=100' "[$(pcard bot1 approve-runs 9 "$A" ''),$(pcard bot1 merge 3 "$B" '\\n\\n<!-- githard-done -->\\nDone.'),$(pcard mallory merge 4 "$C" '')]"
+pend() { local rc=0 got; got=$(GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash skills/on-duty/pending.sh o/r bot1 2>&1) || rc=$?
+  { [ $rc = "$1" ] && [ "$got" = "$2" ]; } || { echo "pending.sh $3: want exit $1 '$2', got exit $rc '$got'"; fail=1; }; }
+pend 0 "pending  #4 is green at ccccccc" "with one green PR nobody carded"
+fx 'repos/o/r/issues/2/comments?per_page=100' "[$(pcard bot1 approve-runs 9 "$A" ''),$(pcard bot1 merge 3 "$B" ''),$(pcard bot1 merge 4 "$C" '')]"
+pend 1 "" "when every head has a card"
+fx 'repos/o/r/issues/2/comments?per_page=100' "[$(pcard bot1 merge 3 "$B" ''),$(pcard bot1 merge 4 "$C" '')]"
+pend 0 "pending  fork CI waiting for approval at aaaaaaa" "with a fork run nobody carded"
+rm -f "$ud/pr_list.json"; pend 2 "" "when GitHub doesn't answer"
+rm -rf "$ud"
+
 # The on-duty workflow template, read as text: there's no YAML parser to count on.
 wf=skills/on-duty/templates/.github/workflows/githard-on-duty.yml
 grep -E '^[[:space:]]*-?[[:space:]]*uses:' "$wf" | grep -vE '@[0-9a-f]{40} # v[0-9]' &&
@@ -419,6 +470,13 @@ grep -cE '^[[:space:]]*ref: GITHARD_SHA_PLACEHOLDER # githard--vX\.Y\.Z$' "$wf" 
 # act.sh refuses any label a workflow names, so the template mustn't name GitHub's default ones
 grep -niwE 'bug|documentation|duplicate|enhancement|invalid|question|wontfix|good first issue|help wanted' "$wf" &&
   { echo "$wf: names a default label, so act.sh would refuse it"; fail=1; }
+# its own comments never queue: the skip is a job-level if:, and concurrency lives on the job
+grep -qE "^    if: .*contains\(.*'<!-- githard -->'" "$wf" && ! grep -q '^concurrency:' "$wf" && grep -q '^    concurrency:' "$wf" ||
+  { echo "$wf: the bot's own comments can queue a run"; fail=1; }
+# both steps that run scripts after Claude use a clean bash and rebuild the config from the checked file
+[ "$(grep -c '^        shell: /bin/bash --noprofile --norc -e -o pipefail {0}$' "$wf")" = 2 ] &&
+  [ "$(grep -c '^          BASH_ENV: ""$' "$wf")" = 2 ] && grep -q 'config.sh .github/githard.yml > "$cfg"' "$wf" ||
+  { echo "$wf: a step after Claude trusts the shell environment or RUNNER_TEMP's config"; fail=1; }
 # filled in the way setup fills it, the template passes repo-setup's pin check
 tmp=$(mktemp -d); mkdir -p "$tmp/.github/workflows"
 sed 's/GITHARD_SHA_PLACEHOLDER/0123456789abcdef0123456789abcdef01234567/' "$wf" > "$tmp/.github/workflows/githard-on-duty.yml"

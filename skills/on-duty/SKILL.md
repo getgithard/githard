@@ -36,7 +36,8 @@ They set both secrets themselves. Don't ask them to paste a token into the chat.
    1. Open https://github.com/settings/personal-access-tokens/new.
    2. Set **Resource owner** to the repo's owner, and **Repository access** to **Only select repositories**, with just this repo.
    3. Under **Repository permissions**, set **Read and write** for Contents, Issues, Pull requests, Actions and Variables.
-   4. Click **Generate token**, then run `! gh secret set GITHARD_TOKEN -R OWNER/REPO` and paste it at the prompt.
+   4. Leave **Workflows** at **No access**. That means a merge of a PR that touches `.github/workflows/` fails at GitHub's API, so those merges always stay with you.
+   5. Click **Generate token**, then run `! gh secret set GITHARD_TOKEN -R OWNER/REPO` and paste it at the prompt.
 
    For the bot identity, the bot account must be a member of the org with write access to the repo. An org may also need to approve the token before it works. Tokens expire, so suggest a calendar reminder for the expiry date.
 
@@ -58,7 +59,7 @@ Run `gh api repos/OWNER/REPO/rules/branches/DEFAULT --jq '[.[] | select(.type ==
 3. Write `.github/githard.yml` with their answers, and run `bash ${CLAUDE_SKILL_DIR}/config.sh .github/githard.yml`. It must exit 0. Show them any warnings it prints.
 4. Open a PR with both files. Explain that nothing runs until it's merged and both secrets are set, and that every later change to the config is a reviewed PR too.
 
-Once it's merged, tell them where things will show up. Cards appear in a pinned issue called "Waiting for you": a 👍 or a reply from an approver lets one go, and they can edit a draft reply before approving it. Each run's notices are in the Actions tab.
+Once it's merged, tell them where things will show up. Cards appear in a pinned issue called "Waiting for you". An approver lets one go with a 👍, or with a reply that says exactly `/approve <ID>`, using the ID printed at the foot of the card and nothing else in the reply. They can edit a draft reply before approving it. Each run's notices are in the Actions tab.
 
 ### Audit an existing setup
 

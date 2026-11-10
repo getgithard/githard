@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The approval queue: cards in a pinned "Waiting for you" issue, approved by a maintainer.
 # Usage: bash queue.sh parse --approvers a,b --bot LOGIN --heads FILE   (JSON on stdin)
-#        bash queue.sh has --bot LOGIN KIND TARGET HEAD                 (JSON on stdin)
+#        bash queue.sh has [--any] --bot LOGIN KIND TARGET HEAD         (JSON on stdin; --any counts done cards too)
 #        bash queue.sh add OWNER/REPO KIND TARGET HEAD BODY_FILE
 #        bash queue.sh done OWNER/REPO COMMENT_ID RESULT
 # stdin is a JSON array of {id, user, body, plus_one_by: [logins]}. All of it is untrusted.
@@ -17,14 +17,15 @@ MARK='<!-- githard -->'
 DONE='<!-- githard-done -->'
 usage() { sed -n '2,11p' "$0" >&2; exit 2; }
 
-# open (not done) cards as JSON: {cid, kind, target, head, id}
-CARDS='def cards($b): [ .[]
+# the bot's cards as JSON: {cid, kind, target, head, id, done}. An open card ends with the marker;
+# a done one has the done marker right after it (queue.sh done). cards() is the open ones.
+CARDS='def allcards($b): [ .[]
   | select(type == "object" and (.id|type) == "number" and (.user|type) == "string" and (.body|type) == "string")
-  | select((.user|ascii_downcase) == $b and (.body|test("<!-- githard -->\\s*$")))
+  | select((.user|ascii_downcase) == $b and (.body|test("<!-- githard -->\\s*($|<!-- githard-done -->)")))
   | . as $c
   | ($c.body | capture("^<!-- githard-card id=(?<cid>[0-9a-f]{8}) kind=(?<kind>[a-z-]+) target=(?<target>[0-9]+) head=(?<head>[0-9a-f]+|-) -->(\\s|$)"))
-  + {id: $c.id, done: ($c.body|contains("<!-- githard-done -->"))}
-  | select(.done|not) ];'
+  + {id: $c.id, done: ($c.body|contains("<!-- githard-done -->"))} ];
+  def cards($b): [ allcards($b)[] | select(.done|not) ];'
 
 lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
@@ -54,13 +55,14 @@ parse() {
 }
 
 has() {
-  local bot=""
+  local bot="" set=cards
+  [ "${1:-}" = --any ] && { set=allcards; shift; }
   [ "${1:-}" = --bot ] && [ $# -ge 2 ] || usage
   bot=$2; shift 2
   [ $# -eq 3 ] || usage
   local out rc=0
   out=$(jq -r --arg b "$(lc "$bot")" --arg k "$1" --arg t "$2" --arg h "$3" "$CARDS"'
-    [ cards($b)[] | select(.kind == $k and .target == $t and .head == $h) | .cid ] | first // empty') || rc=2
+    [ '"$set"'($b)[] | select(.kind == $k and .target == $t and .head == $h) | .cid ] | first // empty') || rc=2
   [ $rc = 0 ] || { echo "queue.sh: stdin is not the expected JSON" >&2; return 2; }
   [ -n "$out" ] && { echo "$out"; return 0; }
   return 1
@@ -92,12 +94,15 @@ add() {
   [ "$kind" = ask ] && { head=$(body_hash "$body") || return 2; }
   # fetch first: a failed read must exit 2, not look like "no duplicate"
   comments=$(gh api --paginate --slurp "repos/$repo/issues/$num/comments") || return 2
-  found=$(printf '%s' "$comments" | jq '[.[][] | {id, user: .user.login, body, plus_one_by: []}]' | bash "$0" has --bot "$me" "$kind" "$target" "$head")
+  # an ask the owner already answered stays answered, so it dedupes against done cards too
+  local any=(); [ "$kind" = ask ] && any=(--any)
+  found=$(printf '%s' "$comments" | jq '[.[][] | {id, user: .user.login, body, plus_one_by: []}]' | bash "$0" has ${any[@]+"${any[@]}"} --bot "$me" "$kind" "$target" "$head")
   case $? in 0) echo "$found"; return 0 ;; 1) ;; *) return 2 ;; esac
   id=$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')
   tmp=$(mktemp) || return 2
+  # the ID shows, because a reply has to name it: /approve ID
   { printf '<!-- githard-card id=%s kind=%s target=%s head=%s -->\n' "$id" "$kind" "$target" "$head"
-    cat "$body"; printf '\n%s\n' "$MARK"; } > "$tmp"
+    cat "$body"; printf '\nCard `%s`: give it a 👍, or reply `/approve %s`.\n%s\n' "$id" "$id" "$MARK"; } > "$tmp"
   gh api -X POST "repos/$repo/issues/$num/comments" -F "body=@$tmp" >/dev/null; local rc=$?
   rm -f "$tmp"
   [ $rc = 0 ] || return 2
