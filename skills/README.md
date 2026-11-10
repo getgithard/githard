@@ -19,5 +19,6 @@ Built so far:
 - [`save-point`](save-point/SKILL.md): a running handoff file, decisions written where the next session reads them, and a fixed order for starting a session. `save-point.sh` drafts the facts from GitHub.
 - [`openssf-badge`](openssf-badge/SKILL.md): the OpenSSF Best Practices badge from setup to gold. `badge-status.sh` reads a project's real answers, `levels.md` maps every criterion, and there are templates for silver's documents plus `add-spdx.sh`, `csp-headers.py` and `check-headers.sh` for gold.
 - [`agent-toolkit`](agent-toolkit/SKILL.md): picks the Claude Code plugins, MCP servers and language servers a project needs, only from the official marketplace or a vetted list, and records them in the repo's `.claude/settings.json` so everyone gets the same tools.
+- [`on-duty`](on-duty/SKILL.md): looks after a repo around the clock from GitHub Actions, on your own Claude account. Claude only proposes. `act.sh` and `gate.sh` decide what goes out, and in safe mode every merge, release and close waits on a card in a "Waiting for you" issue. Ships the workflow, the config and the scripts.
 
 The rest of the planned skills, their order and what "done" means for each are in [`docs/design.md`](../docs/design.md) and [`docs/plan.md`](../docs/plan.md).

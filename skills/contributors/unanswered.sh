@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # List open PRs and issues from outside contributors that are owed something.
 # Usage: bash unanswered.sh OWNER/REPO [--now YYYY-MM-DD]
-#   unanswered  no comment or review from a maintainer yet (PRs), or an outside comment
-#               with no maintainer reply after it (issues: claims, questions)
+#   unanswered  no comment or review from a maintainer yet (PRs), an outside issue with no
+#               comments at all, or an outside comment with no maintainer reply after it
+#               (issues: claims, questions)
 #   check-in    no activity for 30+ days: a person should check in
 #   decide      no activity for 60+ days: close it, or finish it with credit
 # Bots and maintainers' own PRs are skipped. An empty or failed API answer
@@ -32,11 +33,21 @@ while IFS=$'\t' read -r n who updated url; do
   if [ "$d" -ge 60 ]; then echo "decide      #$n @$who  quiet for $d days  $url"; [ $status = 0 ] && status=1
   elif [ "$d" -ge 30 ]; then echo "check-in    #$n @$who  quiet for $d days  $url"; [ $status = 0 ] && status=1; fi
 done <<<"$prs"
+# An outside issue nobody has commented on yet is owed a first reply.
+fresh=$(gh api --paginate "repos/$repo/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .comments == 0
+  and .user.type != "Bot" and (.author_association | test("'"$maint"'") | not)) | [.number, .user.login, .html_url] | @tsv' 2>/dev/null) ||
+  { echo "unknown     couldn't list issues for $repo"; exit 2; }
+while IFS=$'\t' read -r n who url; do
+  [ -n "$n" ] || continue
+  echo "unanswered  issue #$n @$who  $url"; [ $status = 0 ] && status=1
+done <<<"$fresh"
 # Issues whose latest comment is from outside, with no maintainer reply after it: a claim or a question nobody answered.
 issues=$(gh api --paginate "repos/$repo/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .comments > 0) | .number' 2>/dev/null) ||
   { echo "unknown     couldn't list issues for $repo"; exit 2; }
 for n in $issues; do
-  last=$(gh api "repos/$repo/issues/$n/comments?per_page=100" --jq '[.[] | select(.user.type != "Bot")] | last | "\(.author_association) \(.user.login) \(.html_url)"' 2>/dev/null) ||
+  # every page, so the latest comment on a long thread isn't lost past the first 100
+  last=$(gh api --paginate --slurp "repos/$repo/issues/$n/comments?per_page=100" 2>/dev/null |
+    jq -r '[.[][] | select(.user.type != "Bot")] | last | "\(.author_association) \(.user.login) \(.html_url)"') ||
     { echo "unknown     #$n  couldn't read comments"; status=2; continue; }
   read -r assoc who url <<<"$last"
   [ -n "$assoc" ] || continue
