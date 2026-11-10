@@ -224,5 +224,54 @@ nvcase v0.2.0 v0.1.2 $'* feat: b'
 rc=0; printf 'fix: a\n' | bash $nv v01.2.3 >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "next-version.sh accepted a leading-zero tag"; fail=1; }
 rc=0; got=$(set -o pipefail; (echo 'feat!: x'; seq 1 8000 | sed 's/^/fix: /') | bash "$nv" v1.2.3 2>/dev/null) || rc=$?
 { [ "$got" = "breaking v2.0.0" ] && [ $rc = 0 ]; } || { echo "next-version.sh on a long pipe: got '$got', exit $rc"; fail=1; }
+# on-duty queue.sh: only the bot's cards count, only approvers approve, moved heads go stale.
+q=skills/on-duty/queue.sh; qd=$(mktemp -d)
+printf '7 aaa111\n8 bbb222\n' > "$qd/heads"
+card() { # id user body-head-fields extra
+  printf '{"id":%s,"user":"%s","body":"<!-- githard-card id=%s kind=%s target=%s head=%s -->\\ntext\\n<!-- githard -->%s","plus_one_by":%s}' "$1" "$2" "$3" "$4" "$5" "$6" "${7:-}" "${8:-[]}"
+}
+appr() { printf '{"id":%s,"user":"%s","body":"%s","plus_one_by":[]}' "$1" "$2" "$3"; }
+qcase() { # want label json [parse args...]
+  local want=$1 label=$2 json=$3 got; shift 3
+  got=$(printf '%s' "$json" | bash $q parse --approvers Alice,bob --bot githard-bot --heads "$qd/heads" "$@" 2>/dev/null || true)
+  [ "$got" = "$want" ] || { echo "queue.sh $label: want '$want', got '$got'"; fail=1; }
+}
+c1=$(card 10 githard-bot a1b2c3d4 merge 7 aaa111 '' '["bob"]')
+qcase "approved a1b2c3d4 merge 7 10" "thumbs up from approver" "[$c1]"
+qcase "approved a1b2c3d4 merge 7 10" "approver login case" "[$(card 10 GitHard-Bot a1b2c3d4 merge 7 aaa111 '' '["ALICE"]')]"
+qcase "" "thumbs up from stranger" "[$(card 10 githard-bot a1b2c3d4 merge 7 aaa111 '' '["mallory","carol"]')]"
+c2=$(card 10 githard-bot a1b2c3d4 merge 7 aaa111)
+qcase "" "approve from stranger" "[$c2,$(appr 11 mallory '/approve a1b2c3d4')]"
+qcase "approved a1b2c3d4 merge 7 10" "approve from approver" "[$c2,$(appr 11 alice '/approve a1b2c3d4')]"
+qcase "approved a1b2c3d4 merge 7 10" "approve, loose case and spaces" "[$c2,$(appr 11 BOB '  /Approve A1B2C3D4  ')]"
+qcase "" "approve for another card" "[$c2,$(appr 11 alice '/approve deadbeef')]"
+qcase "" "approve with trailing text" "[$c2,$(appr 11 alice '/approve a1b2c3d4 please')]"
+qcase "" "approve before the card" "[$c2,$(appr 9 alice '/approve a1b2c3d4')]"
+qcase "stale a1b2c3d4 merge 7 10" "head moved" "[$(card 10 githard-bot a1b2c3d4 merge 7 ccc333 '' '["bob"]')]"
+qcase "stale a1b2c3d4 merge 9 10" "target gone from heads" "[$(card 10 githard-bot a1b2c3d4 merge 9 aaa111 '' '["bob"]')]"
+qcase "approved a1b2c3d4 ask 0 10" "no-head card is never stale" "[$(card 10 githard-bot a1b2c3d4 ask 0 - '' '["bob"]')]"
+qcase "" "done card" "[$(card 10 githard-bot a1b2c3d4 merge 7 aaa111 '\\n<!-- githard-done -->' '["bob"]')]"
+qcase "" "fake card by stranger" "[$(card 10 mallory a1b2c3d4 merge 7 aaa111 '' '["bob"]')]"
+qcase "" "fake card, stranger approves" "[$(card 10 mallory a1b2c3d4 merge 7 aaa111),$(appr 11 alice '/approve a1b2c3d4')]"
+qcase "" "bot card without closing marker" "[{\"id\":10,\"user\":\"githard-bot\",\"body\":\"<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->\",\"plus_one_by\":[\"bob\"]}]"
+qcase "" "marker not on first line" "[{\"id\":10,\"user\":\"githard-bot\",\"body\":\"hi\\n<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->\\n<!-- githard -->\",\"plus_one_by\":[\"bob\"]}]"
+qcase "" "short card id" "[$(card 10 githard-bot a1b2c3 merge 7 aaa111 '' '["bob"]')]"
+qcase "" "plus_one_by not a list" "[$(card 10 githard-bot a1b2c3d4 merge 7 aaa111 '' '"bob"')]"
+qcase "" "empty approvers" "[$c1]" --approvers ""
+rc=0; echo 'not json' | bash $q parse --approvers bob --bot githard-bot --heads "$qd/heads" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "queue.sh parse took bad json"; fail=1; }
+rc=0; echo '[]' | bash $q parse --approvers bob --bot githard-bot --heads "$qd/nope" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "queue.sh parse took a missing heads file"; fail=1; }
+rc=0; echo '[]' | bash $q parse --approvers bob --heads "$qd/heads" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "queue.sh parse ran without --bot"; fail=1; }
+qhas() { # want label json kind target head
+  local want=$1 label=$2 json=$3 rc=0; shift 3
+  printf '%s' "$json" | bash $q has --bot githard-bot "$@" >/dev/null 2>&1 || rc=$?
+  [ $rc = "$want" ] || { echo "queue.sh has $label: want exit $want, got $rc"; fail=1; }
+}
+qhas 0 "open duplicate" "[$c2]" merge 7 aaa111
+qhas 1 "done card ignored" "[$(card 10 githard-bot a1b2c3d4 merge 7 aaa111 '\\n<!-- githard-done -->')]" merge 7 aaa111
+qhas 1 "different head" "[$c2]" merge 7 bbb222
+qhas 1 "different kind" "[$c2]" label 7 aaa111
+qhas 1 "stranger's fake card" "[$(card 10 mallory a1b2c3d4 merge 7 aaa111)]" merge 7 aaa111
+qhas 2 "bad json" "nope" merge 7 aaa111
+rm -rf "$qd"
 rm -rf "$s"
 exit $fail
