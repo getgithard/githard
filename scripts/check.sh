@@ -399,4 +399,30 @@ git -C "$g" -c tag.gpgsign=false tag v0.1.0; gc 10 'docs: words'; rdue 1 safe "w
 gc 10 'fix: a bug'; gc 1 'feat: new'; rdue 0 safe "with a 10-day-old fix"; rdue 1 slow "under a 30-day wait"
 rm -rf "$g" "$ad"
 
+# The on-duty workflow template, read as text: there's no YAML parser to count on.
+wf=skills/on-duty/templates/.github/workflows/githard-on-duty.yml
+grep -E '^[[:space:]]*-?[[:space:]]*uses:' "$wf" | grep -vE '@[0-9a-f]{40} # v[0-9]' &&
+  { echo "$wf: a uses: line isn't pinned to a full SHA with its version"; fail=1; }
+# untrusted text reaches a run: block only through env:, so no expression belongs inside one
+awk '/^[[:space:]]*(- )?run: *[|>]?/ { match($0, /^[[:space:]]*(- )?/); ind = RLENGTH; inrun = 1; next }
+  inrun && /[^[:space:]]/ { match($0, /^[[:space:]]*/); if (RLENGTH <= ind) inrun = 0 }
+  inrun && /\$\{\{/ { print FILENAME ":" NR ": expression inside run: " $0; bad = 1 }
+  END { exit bad }' "$wf" || fail=1
+# the write token must never reach the step that runs Claude
+awk 'function done() { if (step ~ /anthropics\/claude-code-action/ && step ~ /GITHARD_TOKEN/) bad = 1; step = "" }
+  /^[[:space:]]*steps:/ { insteps = 1; next }
+  insteps && /^[[:space:]]*- / { match($0, /^[[:space:]]*/); if (!sind) sind = RLENGTH; if (RLENGTH == sind) done() }
+  insteps { step = step "\n" $0 } END { done(); exit bad }' "$wf" ||
+  { echo "$wf: GITHARD_TOKEN appears in the claude-code-action step"; fail=1; }
+grep -cE '^[[:space:]]*ref: GITHARD_SHA_PLACEHOLDER # githard--vX\.Y\.Z$' "$wf" | grep -qx 1 ||
+  { echo "$wf: setup needs exactly one GITHARD_SHA_PLACEHOLDER ref line"; fail=1; }
+# act.sh refuses any label a workflow names, so the template mustn't name GitHub's default ones
+grep -niwE 'bug|documentation|duplicate|enhancement|invalid|question|wontfix|good first issue|help wanted' "$wf" &&
+  { echo "$wf: names a default label, so act.sh would refuse it"; fail=1; }
+# filled in the way setup fills it, the template passes repo-setup's pin check
+tmp=$(mktemp -d); mkdir -p "$tmp/.github/workflows"
+sed 's/GITHARD_SHA_PLACEHOLDER/0123456789abcdef0123456789abcdef01234567/' "$wf" > "$tmp/.github/workflows/githard-on-duty.yml"
+audit=$(cd "$tmp" && bash "$OLDPWD/skills/repo-setup/audit.sh") || true
+grep -q '^ok  *Actions pinned to full commit SHAs' <<<"$audit" || { echo "on-duty workflow fails repo-setup's SHA-pin check"; fail=1; }
+rm -rf "$tmp"
 exit $fail
