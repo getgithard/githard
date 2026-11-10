@@ -61,6 +61,7 @@ Names are working names. Each skill's description has to say when to use it, in 
 | `writing` | The house voice applied to READMEs, docs, release notes, replies and posts, and how to swap in a project's own style. |
 | `growth` | Org profile, directories, starter repos, Show and tell etiquette, no spam, giving back to dependencies within their AI policies, measuring what each channel brings. |
 | `save-point` | The handoff file, memory of decisions, background watchers, and how a new session resumes. |
+| `on-duty` | Looks after a repo 24/7 from GitHub Actions on the maintainer's own Claude account: the model proposes, scripts gate every action, and safe mode queues them for approval. Design in `docs/on-duty.md`. |
 
 ### Planned agents
 

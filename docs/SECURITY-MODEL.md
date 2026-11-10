@@ -2,7 +2,7 @@
 
 ## What you can expect
 
-- GitHard acts only through your own Claude Code session and your own `gh` login. It has no server, collects nothing, and sends nothing anywhere except to GitHub (and, when you ask, to bestpractices.dev or Cloudflare) through the tools you've already signed in to.
+- GitHard acts only through your own Claude Code session and your own `gh` login. It has no server, collects nothing, and sends nothing anywhere except to GitHub (and, when you ask, to bestpractices.dev or Cloudflare) through the tools you've already signed in to. The one exception is `on-duty`, if you set it up: it runs in your repo's GitHub Actions, on your own Claude account and your own tokens.
 - It never reads, prints or stores a secret's value. Scripts that touch secrets, such as keyparity's or `security-baseline`'s, work with names only.
 - It asks before money, legal questions, account or ruleset changes, disputes with people, and deletions that can't be undone.
 - It does **not** protect you from a malicious plugin you install yourself, or from a compromised GitHub account.
@@ -16,6 +16,7 @@
 | A secret leaks into a repo or a log | the user's GitHub | secret scanning with push protection (`repo-setup`, `security-baseline`). Secrets only in GitHub secrets. Rotate first if one leaks |
 | A tampered or unverified release | downloaded assets | `releases`: SHA256SUMS and build attestations, checked by `verify-release.sh` before publishing |
 | An Action tag moved to malicious code | the project's CI | Every Action is pinned to a full commit SHA, and Dependabot updates the pins |
+| Issue text steers a model that can write | content GitHard reads, the user's GitHub account | `on-duty`: the step that runs Claude holds only the read-only job token, can write only its proposals file, and runs only read commands. `GITHARD_TOKEN` never reaches it. Scripts check every proposal, fetch every fact themselves, and send each action through the gate, which queues it for a human whenever the config says so |
 | A malicious plugin or MCP server | plugins it recommends | `agent-toolkit` recommends only from the official marketplace and a vetted list |
 
 ## Secure design principles
