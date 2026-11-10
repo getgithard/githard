@@ -57,7 +57,8 @@ Run `gh api repos/OWNER/REPO/rules/branches/DEFAULT --jq '[.[] | select(.type ==
    If the type is `tag`, it's an annotated tag, so look up the commit it points to: `gh api repos/getgithard/githard/git/tags/SHA --jq .object.sha`. The result must be 40 hex characters. If the tag doesn't exist, stop and say so. Don't fall back to `main`.
 2. Copy `${CLAUDE_SKILL_DIR}/templates/.github/workflows/githard-on-duty.yml` to `.github/workflows/githard-on-duty.yml`. Keep that file name, because the workflow counts its own runs by it. Replace `GITHARD_SHA_PLACEHOLDER # githard--vX.Y.Z` with `<sha> # githard--v<version>`. If the placeholder is left in, the GitHard checkout step fails, so a half-done setup can't run.
 3. Write `.github/githard.yml` with their answers, and run `bash ${CLAUDE_SKILL_DIR}/config.sh .github/githard.yml`. It must exit 0. Show them any warnings it prints.
-4. Open a PR with both files. Explain that nothing runs until it's merged and both secrets are set, and that every later change to the config is a reviewed PR too.
+4. Check `.github/workflows/release.yml`. on-duty starts releases through it, so it must exist and take a `version` input under `workflow_dispatch`: `1.2.0` for a `v1.2.0` tag, or the whole tag, like `mytool--v1.2.0`, when tags carry a prefix. `releases`' template, `${CLAUDE_PLUGIN_ROOT}/skills/releases/templates/.github/workflows/release.yml`, takes both. If there's no such workflow, offer that template in the same PR. Without it, on-duty never starts a release. And if the repo has no tag yet, tell them the first release is theirs to make: on-duty only proposes releases after one.
+5. Open a PR with the new files. Explain that nothing runs until it's merged and both secrets are set, and that every later change to the config is a reviewed PR too.
 
 Once it's merged, tell them where things will show up. Cards appear in a pinned issue called "Waiting for you". An approver lets one go with a 👍, or with a reply that says exactly `/approve <ID>`, using the ID printed at the foot of the card and nothing else in the reply. They can edit a draft reply before approving it. Each run's notices are in the Actions tab. on-duty keeps two repo variables of its own: `GITHARD_SPEND`, this month's running total for the cap, and `GITHARD_SEEN`, a short fingerprint of the work the last scheduled run looked at, so the schedule doesn't pay Claude to look at the same list twice. Deleting `GITHARD_SEEN` makes the next scheduled run look again.
 
@@ -69,6 +70,7 @@ Check each of these, and report each one as ok, missing or unknown:
 - Every `uses:` in the workflow is pinned to a 40-character SHA, and the GitHard `ref:` is a SHA, not the placeholder. `bash ${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/audit.sh` checks the `uses:` pins.
 - `bash ${CLAUDE_SKILL_DIR}/config.sh .github/githard.yml` exits 0.
 - `gh secret list -R OWNER/REPO --json name --jq '.[].name'` shows `GITHARD_TOKEN` and one of `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`. Names only: you can't read a secret's value, and you shouldn't try.
+- `.github/workflows/release.yml` exists and has a `version` input under `workflow_dispatch`. If it doesn't, on-duty refuses every release.
 - The pinned GitHard release is the one installed now. If it's older, offer a PR that moves the pin.
 
 ## On a run
@@ -102,6 +104,8 @@ Load the skill and follow its rules for the judgment. on-duty adds no rules of i
 
 Write one JSON object, `{"actions": [...]}`, with at most 20 entries. If nothing needs doing, write `{"actions": []}`. Every entry has `kind` and a one-line `why`. Numbers are plain integers. No text anywhere may contain `<!-- githard`.
 
+`head` is the full 40-character commit SHA you actually looked at: `gh pr view N --json headRefOid --jq .headRefOid`, read before the diff. If the PR has moved on by the time the scripts check, they refuse the proposal, so a push after your read never rides on it.
+
 | `kind` | Other fields | What it does |
 |---|---|---|
 | `reply` | `target` (issue or PR number), `body` | Posts a comment |
@@ -109,10 +113,10 @@ Write one JSON object, `{"actions": [...]}`, with at most 20 entries. If nothing
 | `react` | `comment_id` (the number at the end of a comment's `#issuecomment-` URL), `content`: `+1`, `rocket`, `eyes`, `hooray` or `heart` | Reacts to a comment |
 | `assign` | `target`, `login` | Assigns someone |
 | `label` | `target`, `labels`: a list of labels that already exist | Adds labels |
-| `merge` | `target` (PR number) | Merges once the required checks pass on the head commit. A PR from a fork goes through the same gate as any other |
-| `approve-runs` | `target` (fork PR number) | Approves the waiting CI runs on the head commit |
-| `release` | none | Starts a draft release. The version comes from the commits, not from you |
-| `publish` | `tag`, like `v1.4.0` or `name--v1.4.0` | Publishes a draft release after `verify-release.sh` passes |
+| `merge` | `target` (PR number), `head` | Merges once the required checks pass on that head commit. A PR from a fork goes through the same gate as any other |
+| `approve-runs` | `target` (fork PR number), `head` | Approves the waiting CI runs on that head commit. Changes to risky paths like `.github/` wait for a human, as a merge does |
+| `release` | none | Starts a draft release. The version comes from the commits, not from you. It's refused if that release already exists, draft or not |
+| `publish` | `tag`, like `v1.4.0` or `name--v1.4.0` | Publishes a draft release after `verify-release.sh` passes. A tag that isn't the version the commits call for, or that starts a new major, waits for a human |
 | `ask` | `title`, `body` | Puts a question to the owner. Always waits for them |
 
 Example:

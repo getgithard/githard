@@ -44,7 +44,8 @@ ex() { # stdout is the report, so a command's output goes to stderr, with workfl
 release_facts() {
   local days last c oldest="" nv="$skills/releases/next-version.sh"
   days=$(get release_after_days); [[ $days =~ ^[0-9]+$ ]] || return 2
-  last=$(git describe --tags --abbrev=0 2>/dev/null) || return 2
+  # no tag at all: the first release is the maintainer's to make, so none is due
+  last=$(git describe --tags --abbrev=0 2>/dev/null) || { [ -z "$(git tag -l 2>/dev/null)" ] && git rev-parse -q --verify HEAD >/dev/null && return 1; return 2; }
   version=$(git log --format='%s%n%b' "$last..HEAD" | bash "$nv" "$last") || return 2
   [ "$version" != none ] || return 1
   breaking=false; [[ $version == "breaking "* ]] && { breaking=true; version=${version#breaking }; }
@@ -114,14 +115,31 @@ in_workflows() { # does label $1 appear in a workflow? a missing folder counts a
   [ -d "$w" ] || return 0
   grep -rqiwF -- "$1" "$w"
 }
+release_ok() { # the project's release workflow takes a version, and no release, draft or not, has this one yet
+  local f=.github/workflows/release.yml err; [ -n "$dry" ] && f=$dir/workflows/release.yml
+  [ -f "$f" ] && awk '/^[[:space:]]*workflow_dispatch:/ { match($0, /^[[:space:]]*/); ind = RLENGTH; in_wd = 1; next }
+    in_wd && /[^[:space:]]/ { match($0, /^[[:space:]]*/); if (RLENGTH <= ind) in_wd = 0 }
+    in_wd && /^[[:space:]]+version:/ { ok = 1 } END { exit !ok }' "$f" ||
+    { reason="release.yml has no version input under workflow_dispatch"; return 1; }
+  if [ -n "$dry" ]; then
+    [ -f "$dir/releases.txt" ] || { reason="couldn't check for an existing release"; return 1; }
+    ! grep -qxF -- "$version" "$dir/releases.txt" || { reason="a release for $version already exists"; return 1; }
+  elif err=$(gh release view "$version" -R "$repo" --json tagName 2>&1 >/dev/null); then reason="a release for $version already exists"; return 1
+  else grep -qi 'not found' <<<"$err" || { reason="couldn't check for an existing release"; return 1; }; fi
+}
+publish_breaking() { # prints false only for the version the commits call for, with no new major; anything else needs a human
+  local rc=0 last m l; release_facts >/dev/null || rc=$?
+  last=$(git describe --tags --abbrev=0 2>/dev/null); m=${tag##*v}; m=${m%%.*}; l=${last##*v}; l=${l%%.*}
+  if [ $rc != 2 ] && [ "$version" = "$tag" ] && [[ $l =~ ^[0-9]+$ ]] && [ $((10#$m)) -le $((10#$l)) ]; then echo false; else echo true; fi
+}
 replies_approved() { if [ -n "$dry" ]; then rd replies-approved.txt; else gh variable get GITHARD_REPLIES_APPROVED -R "$repo" 2>/dev/null; fi; }
 
-# --- validate $act (one action as JSON). Sets kind target cid login content tag labels body title why key.
+# --- validate $act (one action as JSON). Sets kind target cid login content tag labels body title why key rhead.
 # On refusal sets reason and returns 1. Nothing from the model is trusted past this point unchecked.
 str() { jq -r --arg k "$1" 'if type == "object" then .[$k] else null end | if type == "string" or type == "number" then tostring else empty end' <<<"$act"; }
 validate() {
   kind=$(str kind); target=$(str target); cid=$(str comment_id); key=""; reason=""
-  login=$(str login); content=$(str content); tag=$(str tag); body=$(str body); title=$(str title); why=$(str why)
+  login=$(str login); content=$(str content); tag=$(str tag); body=$(str body); title=$(str title); why=$(str why); rhead=$(str head)
   case $kind in reply|react|assign|label|merge|close|approve-runs|release|publish|ask) ;; *) reason="unknown kind"; return 1 ;; esac
   jq -e '[.. | strings | select(contains("<!-- githard") or contains("<!-- /githard"))] | length == 0' <<<"$act" >/dev/null ||
     { reason="text carries a githard marker"; return 1; }
@@ -146,6 +164,7 @@ validate() {
       labels_known > "$tmp/known" || { reason="couldn't read the repo's labels"; return 1; }
       while IFS= read -r l; do grep -qxF -- "$l" "$tmp/known" || { reason="label doesn't exist in the repo"; return 1; }
         ! in_workflows "$l" || { reason="a workflow reacts to that label"; return 1; }; done <<<"$labels" ;;
+    merge|approve-runs) [[ $rhead =~ ^[0-9a-f]{40}$ ]] || { reason="head must be the 40-hex commit that was reviewed"; return 1; } ;;
     reply|close) [ -n "$body" ] && [ ${#body} -le 60000 ] || { reason="body is empty or too long"; return 1; } ;;
     publish) [[ $tag =~ ^([A-Za-z0-9-]+--)?v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { reason="not a version tag"; return 1; } ;;
     ask) [ -n "$title" ] && [ -n "$body" ] || { reason="ask needs a title and a body"; return 1; } ;;
@@ -157,16 +176,18 @@ facts() {
   head=-; g=()
   case $kind in
     merge|approve-runs)
-      head=$(pr_head "$key") || { reason="couldn't read an open PR into the default branch"; return 1; } ;;
+      head=$(pr_head "$key") || { reason="couldn't read an open PR into the default branch"; return 1; }
+      [ "$head" = "$rhead" ] || { reason="the PR changed since it was reviewed"; return 1; }
+      pr_paths "$key" "$head" "$tmp/paths"; g=(--paths "$tmp/paths") ;;
   esac
   case $kind in
-    merge) pr_paths "$key" "$head" "$tmp/paths"; g=(--paths "$tmp/paths")
-      local r; r=$(review_rule "$key") && [[ $r =~ ^(true|false)$ ]] && g+=(--review-required "$r") ;;
+    merge) local r; r=$(review_rule "$key") && [[ $r =~ ^(true|false)$ ]] && g+=(--review-required "$r") ;;
     reply|react|assign) local n; n=$(replies_approved) && [[ $n =~ ^[0-9]+$ ]] && g=(--replies-approved "$n") ;;
     release) local rc=0; release_facts || rc=$?
       [ $rc = 0 ] || { [ $rc = 1 ] && reason="no release due yet" || reason="couldn't work out the release"; return 1; }
-      g=(--breaking "$breaking") ;;
-    publish) [ -n "$dry" ] || bash "$skills/releases/verify-release.sh" "$repo" "$tag" >&2 || { reason="verify-release.sh failed on $tag"; return 1; } ;;
+      release_ok || return 1; g=(--breaking "$breaking") ;;
+    publish) [ -n "$dry" ] || bash "$skills/releases/verify-release.sh" "$repo" "$tag" >&2 || { reason="verify-release.sh failed on $tag"; return 1; }
+      g=(--breaking "$(publish_breaking)") ;;
   esac
   return 0 # a missing optional fact only leaves the gate to queue
 }
@@ -188,8 +209,9 @@ execute() {
     merge) IFS=, read -ra checks <<<"$(get wait_for_checks)"
       for c in ${checks[@]+"${checks[@]}"}; do a+=(--require "$c"); done
       ex bash "$skills/merging/merge-when-green.sh" "$repo" "$key" --head "$head" --allow-fork --timeout-min 20 ${a[@]+"${a[@]}"} ;;
-    approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" ;;
-    release) ex gh workflow run release.yml -R "$repo" -f "version=${version##*v}" ;; # builds a draft, never publishes
+    approve-runs) ex bash "$skills/fork-pr-safety/approve-runs.sh" "$repo" "$key" --head "$head" ;;
+    # builds a draft, never publishes. The template takes 1.2.0 for v1.2.0, and a prefixed tag whole
+    release) c=$version; [[ $c == v* ]] && c=${c#v}; ex gh workflow run release.yml -R "$repo" -f "version=$c" ;;
     publish) ex gh release edit "$tag" -R "$repo" --draft=false ;;
     ask) : ;;
   esac

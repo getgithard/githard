@@ -169,10 +169,20 @@ gcase queue "merge without review flag" decide "$s/auto" merge --paths "$s/p-src
 gcase queue "release breaking" decide "$s/auto" release --breaking true
 gcase go "release auto" decide "$s/auto" release --breaking false
 gcase queue "release safe" decide "$s/safe" release --breaking false
-for k in close approve-runs publish; do
-  gcase queue "$k safe" decide "$s/safe" $k
-  gcase go "$k auto" decide "$s/auto" $k
-done
+gcase queue "close safe" decide "$s/safe" close
+gcase go "close auto" decide "$s/auto" close
+# approving fork CI runs its code, so risky paths wait for a human as they do for a merge
+gcase queue "approve-runs safe" decide "$s/safe" approve-runs --paths "$s/p-src"
+gcase go "approve-runs src in auto" decide "$s/auto" approve-runs --paths "$s/p-src"
+gcase queue "approve-runs workflow in auto" decide "$s/auto" approve-runs --paths "$s/p-ci"
+gcase queue "approve-runs without paths" decide "$s/auto" approve-runs
+gcase go "approve-runs workflow, risky off" decide "$s/auto-norisk" approve-runs --paths "$s/p-ci"
+printf '\n\n' > "$s/p-blank"; gcase queue "merge blank-only paths" decide "$s/auto" merge --paths "$s/p-blank" --review-required false
+gcase queue "approve-runs blank-only paths" decide "$s/auto" approve-runs --paths "$s/p-blank"
+gcase queue "publish safe" decide "$s/safe" publish --breaking false
+gcase go "publish auto" decide "$s/auto" publish --breaking false
+gcase queue "publish breaking" decide "$s/auto" publish --breaking true
+gcase queue "publish, breaking unknown" decide "$s/auto" publish
 gcase "queue unknown kind" "unknown kind" decide "$s/auto" frobnicate
 gcase queue "missing CFG" decide "$s/nope" label
 printf 'mode=auto\n' > "$s/partial"; gcase queue "partial CFG" decide "$s/partial" label
@@ -325,20 +335,31 @@ printf 'bug\ngood first issue\nsafe to test\n' > "$ad/labels.txt"; mkdir "$ad/wo
 printf "on: pull_request_target\njobs:\n  t:\n    if: github.event.label.name == 'Safe To Test'\n    steps: [{run: debug}]\n" > "$ad/workflows/ci.yml"
 jq -n '[{id: 950, user: "githard-bot", body: "hi"}, {id: 951, user: "carol", body: "<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->"}, {id: 960, user: "carol", body: "thanks"}]' > "$ad/comments.json"
  printf '.github/workflows/x.yml\n' > "$ad/31.txt"; printf 'src/a.ts\n' > "$ad/32.txt"
-printf '31 aaa111\n32 bbb222\n' > "$ad/heads.txt"; echo 5 > "$ad/queue.txt"; printf '900\n901\n' > "$ad/queue-comments.txt"; echo githard-bot > "$ad/bot.txt"
+H31=$(printf 'a%.0s' {1..40}); H32=$(printf 'b%.0s' {1..40}); H33=$(printf 'f%.0s' {1..40})
+printf '31 %s\n32 %s\n33 %s\n' "$H31" "$H32" "$H33" > "$ad/heads.txt"; echo 5 > "$ad/queue.txt"; printf '900\n901\n' > "$ad/queue-comments.txt"; echo githard-bot > "$ad/bot.txt"
 acase() { # want-prefix want-exit label cfg action-json [flags]
   local want=$1 wantrc=$2 label=$3 c=$4 got rc=0; printf '{"actions":[%s]}' "$5" > "$ad/actions.json"; shift 5
   got=$(bash "$act" o/r "$ad/$c" "$ad/actions.json" --dry-run --paths-from "$ad" "$@" 2>/dev/null) || rc=$?
   { [[ $got == "$want"* ]] && [ $rc = "$wantrc" ]; } || { echo "act.sh $label: want '$want...' exit $wantrc, got '$got' exit $rc"; fail=1; }
 }
 acase "queued reply 18" 0 "reply in safe, chat=approve" safe '{"kind":"reply","target":18,"body":"hi","why":"w"}'
-acase "queued merge 31" 0 "auto merge touching a workflow" auto '{"kind":"merge","target":31,"why":"w"}' --review-required false
-acase "done merge 32" 0 "auto merge of plain source" auto '{"kind":"merge","target":32,"why":"w"}' --review-required false
+acase "queued merge 31" 0 "auto merge touching a workflow" auto "{\"kind\":\"merge\",\"target\":31,\"head\":\"$H31\",\"why\":\"w\"}" --review-required false
+acase "done merge 32" 0 "auto merge of plain source" auto "{\"kind\":\"merge\",\"target\":32,\"head\":\"$H32\",\"why\":\"w\"}" --review-required false
 # act.sh can't tell a fork PR from any other, so every gated merge says --allow-fork
-grep -q 'merging/merge-when-green.sh o/r 32 --head bbb222 --allow-fork ' "$ad/ran.txt" 2>/dev/null ||
+grep -q "merging/merge-when-green.sh o/r 32 --head $H32 --allow-fork " "$ad/ran.txt" 2>/dev/null ||
   { echo "act.sh: an auto merge doesn't pass --allow-fork, so a fork PR can't merge: $(cat "$ad/ran.txt" 2>/dev/null)"; fail=1; }
-acase "queued merge 32" 0 "auto merge, review state unknown" auto '{"kind":"merge","target":32,"why":"w"}'
-acase "refused merge 40" 1 "merge with no known head" auto '{"kind":"merge","target":40,"why":"w"}' --review-required false
+acase "queued merge 32" 0 "auto merge, review state unknown" auto "{\"kind\":\"merge\",\"target\":32,\"head\":\"$H32\",\"why\":\"w\"}"
+acase "refused merge 40" 1 "merge with no known head" auto "{\"kind\":\"merge\",\"target\":40,\"head\":\"$H32\",\"why\":\"w\"}" --review-required false
+# the head that was reviewed is pinned: none, a short one, or one the PR has moved off is refused
+acase "refused merge 32 head must be" 1 "merge without a head" auto '{"kind":"merge","target":32,"why":"w"}' --review-required false
+acase "refused merge 32 head must be" 1 "merge with a short head" auto '{"kind":"merge","target":32,"head":"bbbbbbb","why":"w"}' --review-required false
+acase "refused merge 32 the PR changed since it was reviewed" 1 "merge after a push" auto "{\"kind\":\"merge\",\"target\":32,\"head\":\"$H31\",\"why\":\"w\"}" --review-required false
+acase "refused approve-runs 32 the PR changed" 1 "approve-runs after a push" auto "{\"kind\":\"approve-runs\",\"target\":32,\"head\":\"$H31\",\"why\":\"w\"}"
+# approve-runs reads the changed files at the pinned head, like a merge, and passes the head on
+acase "queued approve-runs 31" 0 "auto approve-runs touching a workflow" auto "{\"kind\":\"approve-runs\",\"target\":31,\"head\":\"$H31\",\"why\":\"w\"}"
+acase "done approve-runs 32" 0 "auto approve-runs of plain source" auto "{\"kind\":\"approve-runs\",\"target\":32,\"head\":\"$H32\",\"why\":\"w\"}"
+grep -q "fork-pr-safety/approve-runs.sh o/r 32 --head $H32\$" "$ad/ran.txt" 2>/dev/null || { echo "act.sh: approve-runs doesn't pass the pinned head"; fail=1; }
+acase "queued approve-runs 33" 0 "auto approve-runs, changed files unknown" auto "{\"kind\":\"approve-runs\",\"target\":33,\"head\":\"$H33\",\"why\":\"w\"}"
 acase "refused reply 12__rm_-rf__" 1 "target injection" auto '{"kind":"reply","target":"12; rm -rf /","body":"hi","why":"w"}'
 acase "refused publish" 1 "tag injection" auto '{"kind":"publish","tag":"v1 && x","why":"w"}'
 acase "refused react" 1 "reaction -1" auto '{"kind":"react","comment_id":7,"content":"-1","why":"w"}'
@@ -407,10 +428,34 @@ got=$(bash "$act" o/r "$ad/safe" --approved --dry-run --paths-from "$ad" 2>/dev/
 g=$(mktemp -d); gc() { GIT_COMMITTER_DATE="$(( $(date +%s) - $1 * 86400 )) +0000" git -C "$g" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q --allow-empty -m "$2"; }
 git -C "$g" init -q; gc 20 'feat: first'
 rdue() { local rc=0; (cd "$g" && bash "$act" o/r "$ad/$2" --release-due >/dev/null 2>&1) || rc=$?; [ $rc = "$1" ] || { echo "act.sh --release-due $3: want exit $1, got $rc"; fail=1; }; }
-rdue 2 safe "with no tag"
+rdue 1 safe "with no tag (the first release is the maintainer's)"
 git -C "$g" -c tag.gpgsign=false tag v0.1.0; gc 10 'docs: words'; rdue 1 safe "with only docs"
 gc 10 'fix: a bug'; gc 1 'feat: new'; rdue 0 safe "with a 10-day-old fix"; rdue 1 slow "under a 30-day wait"
-rm -rf "$g" "$ad"
+# release: only through a release.yml that takes a version, never twice, and a prefixed tag stays whole
+racase() { # dir want-prefix want-exit label action-json: acase, run inside a git repo
+  local d=$1 want=$2 wantrc=$3 label=$4 got rc=0; printf '{"actions":[%s]}' "$5" > "$ad/actions.json"
+  got=$(cd "$d" && bash "$act" o/r "$ad/auto" "$ad/actions.json" --dry-run --paths-from "$ad" 2>/dev/null) || rc=$?
+  { [[ $got == "$want"* ]] && [ $rc = "$wantrc" ]; } || { echo "act.sh $label: want '$want...' exit $wantrc, got '$got' exit $rc"; fail=1; }
+}
+rel='{"kind":"release","why":"w"}'; : > "$ad/releases.txt"
+racase "$g" "refused release 0 release.yml has no version input" 1 "release without release.yml" "$rel"
+printf 'on:\n  workflow_dispatch:\njobs: {}\n' > "$ad/workflows/release.yml"
+racase "$g" "refused release 0 release.yml has no version input" 1 "release.yml without a version input" "$rel"
+printf 'on:\n  workflow_dispatch:\n    inputs:\n      version:\n        required: true\njobs: {}\n' > "$ad/workflows/release.yml"
+echo v0.2.0 > "$ad/releases.txt"; racase "$g" "refused release 0 a release for v0.2.0 already exists" 1 "release that's already drafted" "$rel"
+rm "$ad/releases.txt"; racase "$g" "refused release 0 couldn't check" 1 "release, existing ones unknown" "$rel"
+: > "$ad/releases.txt"; : > "$ad/ran.txt"; racase "$g" "done release v0.2.0" 0 "release in auto" "$rel"
+grep -qx 'gh workflow run release.yml -R o/r -f version=0.2.0' "$ad/ran.txt" || { echo "act.sh: release ran '$(cat "$ad/ran.txt")'"; fail=1; }
+# publish: only the version the commits call for, with no new major, goes on its own
+racase "$g" "done publish v0.2.0" 0 "publish the computed version" '{"kind":"publish","tag":"v0.2.0","why":"w"}'
+racase "$g" "queued publish v0.3.0" 0 "publish a version the commits don't call for" '{"kind":"publish","tag":"v0.3.0","why":"w"}'
+racase "$g" "queued publish v1.0.0" 0 "publish a new major" '{"kind":"publish","tag":"v1.0.0","why":"w"}'
+g2=$(mktemp -d); git -C "$g2" init -q; g=$g2 gc 20 'feat: first'; git -C "$g2" -c tag.gpgsign=false tag mytool--v0.1.0; g=$g2 gc 10 'fix: a'
+: > "$ad/ran.txt"; racase "$g2" "done release mytool--v0.1.1" 0 "release with a prefixed tag" "$rel"
+grep -qx 'gh workflow run release.yml -R o/r -f version=mytool--v0.1.1' "$ad/ran.txt" || { echo "act.sh: prefixed release ran '$(cat "$ad/ran.txt")'"; fail=1; }
+g=$g2 gc 9 'feat!: drop the old flag'
+racase "$g2" "queued publish mytool--v1.0.0" 0 "publish of the breaking version the commits call for" '{"kind":"publish","tag":"mytool--v1.0.0","why":"w"}'
+rm -rf "$g" "$g2" "$ad"
 
 # unanswered.sh against a stand-in gh that answers "api [--paginate] PATH --jq F" from fixture files.
 ud=$(mktemp -d); mkdir "$ud/bin"
@@ -485,6 +530,13 @@ rc=0; stub bash $mwg o/r 7 --head "$H" --timeout-min 1 >/dev/null 2>&1 || rc=$?
 : > "$ud/calls"; rc=0; stub bash $mwg o/r 7 --head "$H" --allow-fork --timeout-min 1 >/dev/null 2>&1 || rc=$?
 { [ $rc = 0 ] && grep -qx "pr merge 7 -R o/r --squash --match-head-commit $H" "$ud/calls"; } ||
   { echo "merge-when-green.sh --allow-fork didn't merge a green fork PR: exit $rc"; fail=1; }
+# approve-runs.sh --head approves only at the commit that was read, and refuses once the PR moves on
+fx 'repos/o/r/pulls/9' "{\"head\":{\"sha\":\"$H\"}}"; fx "repos/o/r/actions/runs?status=action_required&head_sha=$H&per_page=100" '{"workflow_runs":[{"id":11}]}'
+fx 'repos/o/r/actions/runs/11/approve' '{}'
+: > "$ud/calls"; rc=0; stub bash skills/fork-pr-safety/approve-runs.sh o/r 9 --head "$A" >/dev/null 2>&1 || rc=$?
+{ [ $rc = 2 ] && ! grep -q approve "$ud/calls"; } || { echo "approve-runs.sh approved runs after the head moved: exit $rc"; fail=1; }
+: > "$ud/calls"; rc=0; stub bash skills/fork-pr-safety/approve-runs.sh o/r 9 --head "$H" >/dev/null 2>&1 || rc=$?
+{ [ $rc = 0 ] && grep -qx 'api -X POST repos/o/r/actions/runs/11/approve' "$ud/calls"; } || { echo "approve-runs.sh --head didn't approve at the head: exit $rc"; fail=1; }
 rm -rf "$ud"
 
 # The on-duty workflow template, read as text: there's no YAML parser to count on.
@@ -514,11 +566,24 @@ grep -qE "^    if: .*contains\(.*'<!-- githard -->'" "$wf" && ! grep -q '^concur
 [ "$(grep -c '^        shell: /bin/bash --noprofile --norc -e -o pipefail {0}$' "$wf")" = 2 ] &&
   [ "$(grep -c '^          BASH_ENV: ""$' "$wf")" = 2 ] && grep -q 'config.sh .github/githard.yml > "$cfg"' "$wf" ||
   { echo "$wf: a step after Claude trusts the shell environment or RUNNER_TEMP's config"; fail=1; }
-# GITHARD_SEEN is written once, in the carry step, only after act.sh (which exits the step on failure)
+# GITHARD_SEEN is written once, in the carry step, only after act.sh
 awk '/^      - name: / { carry = ($0 ~ /Carry out the proposals/) }
   carry && /act\.sh "\$REPO" "\$cfg" "\$f"/ { acted = 1 }
   /gh variable set GITHARD_SEEN/ { n++; if (!(carry && acted)) bad = 1 }
-  END { exit (bad || n != 1) }' "$wf" || { echo "$wf: GITHARD_SEEN can be set before act.sh succeeds"; fail=1; }
+  END { exit (bad || n != 1) }' "$wf" || { echo "$wf: GITHARD_SEEN can be set before act.sh runs"; fail=1; }
+# the carry step's own lines, run with a stand-in act.sh and gh: a refusal (1) is permanent, so SEEN is
+# written for it as for 0; only 2 leaves SEEN for next time. The step still fails with act.sh's code
+snip=$(awk '/^          rc=0; bash \.githard\/skills\/on-duty\/act\.sh "\$REPO" "\$cfg" "\$f"/ {p = 1} p {print substr($0, 11)} p && /^          exit "\$rc"$/ {exit}' "$wf")
+sd=$(mktemp -d); mkdir -p "$sd/.githard/skills/on-duty" "$sd/bin"; echo 'exit "$ACT_RC"' > "$sd/.githard/skills/on-duty/act.sh"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "$SD/calls"\n' > "$sd/bin/gh"; chmod +x "$sd/bin/gh"
+for want in 0:1 1:1 2:0; do
+  : > "$sd/calls"; rc=0
+  (cd "$sd" && SD=$sd ACT_RC=${want%:*} REPO=o/r cfg=c f=a SIG=abc PATH="$sd/bin:$PATH" bash -e -o pipefail -c "$snip") || rc=$?
+  n=$(grep -c '^variable set GITHARD_SEEN -R o/r --body abc$' "$sd/calls" || true)
+  { [ -n "$snip" ] && [ "$rc" = "${want%:*}" ] && [ "$n" = "${want#*:}" ]; } ||
+    { echo "$wf: when act.sh exits ${want%:*}, the carry step exits $rc and sets GITHARD_SEEN $n times"; fail=1; }
+done
+rm -rf "$sd"
 # filled in the way setup fills it, the template passes repo-setup's pin check
 tmp=$(mktemp -d); mkdir -p "$tmp/.github/workflows"
 sed 's/GITHARD_SHA_PLACEHOLDER/0123456789abcdef0123456789abcdef01234567/' "$wf" > "$tmp/.github/workflows/githard-on-duty.yml"

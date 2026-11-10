@@ -258,6 +258,8 @@ jobs:
           # the config again, from the checked file, not from anything left in RUNNER_TEMP
           cfg=$(mktemp)
           bash .githard/skills/on-duty/config.sh .github/githard.yml > "$cfg"
-          bash .githard/skills/on-duty/act.sh "$REPO" "$cfg" "$f"
-          # only once every proposal went out or was queued: anything refused gets looked at again
-          if [ -n "$SIG" ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi
+          rc=0; bash .githard/skills/on-duty/act.sh "$REPO" "$cfg" "$f" || rc=$?
+          # a refusal (1) would be refused again, so it isn't worth paying Claude for the same list.
+          # Only 2, act.sh couldn't read or finish its input, means look again next time
+          if [ "$rc" -le 1 ] && [ -n "$SIG" ]; then gh variable set GITHARD_SEEN -R "$REPO" --body "$SIG"; fi
+          exit "$rc"

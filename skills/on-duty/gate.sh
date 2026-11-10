@@ -2,7 +2,7 @@
 # Decide whether a proposed action goes out or waits for a human. The model never decides this.
 # Usage: bash gate.sh decide CFG KIND [--paths FILE] [--review-required true|false] [--breaking true|false] [--replies-approved N]
 #        bash gate.sh should-run CFG --assoc ASSOC --body-file FILE --runs-today N
-# CFG is the output of config.sh saved to a file. --paths lists one changed file per line.
+# CFG is the output of config.sh saved to a file. --paths lists one changed file per line (merge, approve-runs).
 # Stdout: decide prints "go" or "queue <reason>"; should-run prints "run" or "skip <reason>". Exit 0.
 # Exit 2 on a bad command line. Anything missing, garbled or unknown queues or skips, never goes.
 set -uo pipefail
@@ -43,19 +43,21 @@ if [ "$sub" = decide ]; then
       elif [ "$chat" = approve ]; then no "chat needs approval"
       elif [[ $approved =~ ^[0-9]+$ ]] && [ "$approved" -ge "$count" ]; then echo go
       else no "approve-first: $count approved replies needed"; fi ;;
-    merge)
-      [[ $review =~ ^(true|false)$ ]] || no "review state unknown"
-      [ "$review" = false ] || no "review required"
+    merge|approve-runs) # approving fork CI runs the PR's code, so it gets the same path check as a merge
+      if [ "$kind" = merge ]; then
+        [[ $review =~ ^(true|false)$ ]] || no "review state unknown"
+        [ "$review" = false ] || no "review required"
+      fi
       if [ "$risky" = true ]; then
-        [ -s "$paths" ] || no "changed files unknown"
+        grep -q . "$paths" 2>/dev/null || no "changed files unknown"
         grep -Eq "$RISKY" "$paths" && no "touches risky paths"
       fi
       by_mode ;;
-    release)
+    release|publish)
       [[ $breaking =~ ^(true|false)$ ]] || no "breaking state unknown"
       [ "$breaking" = false ] || no "breaking change"
       by_mode ;;
-    close|approve-runs|publish) by_mode ;;
+    close) by_mode ;;
     *) no "unknown kind" ;;
   esac
   exit 0

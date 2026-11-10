@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release, like 1.2.0 (no v)"
+        description: "Version to release, like 1.2.0 (no v), or a whole prefixed tag like mytool--v1.2.0"
         required: true
 # Read-only by default. Only the job that needs write access gets it (OpenSSF Scorecard: Token-Permissions).
 permissions:
@@ -40,6 +40,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         # Uses the running draft's notes if there is one, so nothing written along the way is lost.
         run: |
-          notes=$(gh release view "v$VERSION" --json body --jq .body 2>/dev/null || true)
-          gh release delete "v$VERSION" --yes 2>/dev/null || true
-          gh release create "v$VERSION" dist/* --draft --target "$GITHUB_SHA" --title "v$VERSION" --notes "${notes:-Release notes go here.}"
+          case $VERSION in *--v*) tag=$VERSION ;; *) tag=v$VERSION ;; esac
+          notes=$(gh release view "$tag" --json body --jq .body 2>/dev/null || true)
+          gh release delete "$tag" --yes 2>/dev/null || true
+          gh release create "$tag" dist/* --draft --target "$GITHUB_SHA" --title "$tag" --notes "${notes:-Release notes go here.}"
