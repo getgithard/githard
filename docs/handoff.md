@@ -172,3 +172,21 @@ Not ours, so leave them alone: a podman VM, a Playwright test server and a merge
 - Build on-duty once James approves the plan.
 - Watch for @O1sumitkumar's PR on keyparity#18. It's a first-time fork PR, so read the diff before approving CI.
 - #18 launch and #77 coverage are still waiting on James's choice.
+
+## 2026-11-10 22:18 UTC: on-duty merged
+
+**Done:**
+- `on-duty` merged in #84 (fixes #83). It covers the skill, the workflow template and its config, and the act, gate, queue and spend scripts. It also adds `next-version.sh`, plus `--head`, `--require` and `--allow-fork` on the merge and approve-runs scripts. With the plugin, all 5 evals pass. Without it, 3 of the 5 fail.
+- In #85, `unanswered.sh` stopped printing `@null` for an issue that only bots had answered.
+
+**Not proven yet:**
+- Nothing in on-duty has run against real GitHub. The live checklist is in the local SDD reports at `~/Documents/GitHub/githard-on-duty/.superpowers/sdd/2026-11-10-on-duty/task-6-report.md` and `task-7-report.md`. The three biggest unknowns:
+  - whether `GH_TOKEN` survives claude-code-action's environment scrub;
+  - whether the narrowed Write rule can create the proposals file;
+  - whether the job token can read check status.
+- The README and the release notes don't mention on-duty until it ships in a release.
+
+**Next:**
+- A live test needs a scratch repo, or keyparity, with James's **own** Claude secret and PAT. Only James can choose to set that up.
+- Parked: an approved merge card that times out stays suppressed. Exit code 2 also means "some merges were deferred".
+- Watch for @O1sumitkumar's PR on keyparity#18 (fork, so read the diff before approving CI).
