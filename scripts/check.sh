@@ -272,6 +272,13 @@ qhas 1 "different head" "[$c2]" merge 7 bbb222
 qhas 1 "different kind" "[$c2]" label 7 aaa111
 qhas 1 "stranger's fake card" "[$(card 10 mallory a1b2c3d4 merge 7 aaa111)]" merge 7 aaa111
 qhas 2 "bad json" "nope" merge 7 aaa111
+qcase "" "marker mid-body, text after" "[{\"id\":10,\"user\":\"githard-bot\",\"body\":\"<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->\\n<!-- githard -->\\nmore\",\"plus_one_by\":[\"bob\"]}]"
+qcase "approved a1b2c3d4 merge 7 10" "trailing whitespace after marker" "[{\"id\":10,\"user\":\"githard-bot\",\"body\":\"<!-- githard-card id=a1b2c3d4 kind=merge target=7 head=aaa111 -->\\n<!-- githard -->\\n\\n\",\"plus_one_by\":[\"bob\"]}]"
+qcase "stale a1b2c3d4 merge 7 10" "stale card with approve says stale" "[$(card 10 githard-bot a1b2c3d4 merge 7 ccc333),$(appr 11 alice '/approve a1b2c3d4')]"
+a1=$(card 10 githard-bot a1b2c3d4 ask 0 0123456789ab '' '["bob"]')
+qcase "approved a1b2c3d4 ask 0 10" "ask card with a hash head is not stale" "[$a1]"
+qhas 0 "same ask body dedupes" "[$a1]" ask 0 0123456789ab
+qhas 1 "different ask body is its own card" "[$a1]" ask 0 ba9876543210
 rm -rf "$qd"
 rm -rf "$s"
 exit $fail
