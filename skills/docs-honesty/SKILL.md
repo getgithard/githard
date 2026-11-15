@@ -18,7 +18,7 @@ The reasons behind each rule are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
 
 ## Audit every release
 
-After a release ships, dispatch the `docs-auditor` agent with the repo, the tag and the docs path. It compares the docs with the release's help text, notes and links, and reports each untrue claim as `path:line`. If you can't dispatch it, follow `${CLAUDE_PLUGIN_ROOT}/agents/docs-auditor.md` yourself.
+After a release ships, work through `${CLAUDE_SKILL_DIR}/audit-checklist.md` with the repo, the tag and the docs path. It compares the docs with the release's help text, notes and links, and reports each untrue claim as `path:line`.
 
 For the two checks a script can do, links and flags:
 

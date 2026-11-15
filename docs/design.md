@@ -34,13 +34,14 @@ These carry through every skill. Each comes from `knowledge/lessons.md`.
 .claude-plugin/plugin.json        manifest
 .claude-plugin/marketplace.json   this repo is its own marketplace
 skills/<name>/SKILL.md            one folder per skill, with reference files beside it
-agents/<name>.md                  subagents the skills hand work to
 knowledge/lessons.md              shared field notes the skills draw on
 knowledge/voice.md                the default house voice
 evals/                            eval cases per skill (claude plugin eval)
 ```
 
 Skills reference `knowledge/` instead of copying it, so a lesson is fixed in one place.
+
+GitHard is skills and nothing else. It ships no subagents and no bot: nothing runs on a schedule or in GitHub Actions on your behalf. Every change happens in your own Claude Code session, while you're there to see it. James decided this on 15 Nov 2026, and dropped `on-duty` and both agents.
 
 ### Planned skills
 
@@ -61,14 +62,6 @@ Names are working names. Each skill's description has to say when to use it, in 
 | `writing` | The house voice applied to READMEs, docs, release notes, replies and posts, and how to swap in a project's own style. |
 | `growth` | Org profile, directories, starter repos, Show and tell etiquette, no spam, giving back to dependencies within their AI policies, measuring what each channel brings. |
 | `save-point` | The handoff file, memory of decisions, background watchers, and how a new session resumes. |
-| `on-duty` | Looks after a repo 24/7 from GitHub Actions on the maintainer's own Claude account: the model proposes, scripts gate every action, and safe mode queues them for approval. Design in `docs/on-duty.md`. |
-
-### Planned agents
-
-| Agent | Job |
-|---|---|
-| `fork-pr-reviewer` | Read-only review of a fork PR's full diff for anything that runs code with secrets, touches `.github/`, or doesn't match its description. Reports, never approves. |
-| `docs-auditor` | Compares docs against a release: CLI help, schemas, release notes, links. Reports each claim that isn't true of the release. |
 
 ### Hooks
 
