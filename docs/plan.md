@@ -16,14 +16,14 @@ The plugin skeleton, the manifests, this plan, `docs/design.md`, `knowledge/`, r
 ## M2: People
 
 5. **`contributors`**
-6. **`fork-pr-safety`**, with the `fork-pr-reviewer` agent
+6. **`fork-pr-safety`**
 7. **`issues-and-roadmap`**
 
 ## M3: Shipping
 
 8. **`merging`**, shipping the merge-when-green and serial-merge scripts
 9. **`releases`**
-10. **`docs-honesty`**, with the `docs-auditor` agent
+10. **`docs-honesty`**
 
 ## M4: Org and growth
 
@@ -38,10 +38,6 @@ The plugin skeleton, the manifests, this plan, `docs/design.md`, `knowledge/`, r
 16. **README with a real before and after**, install line, and screenshots of a real result.
 17. **First release:** tag `githard--v0.1.0` with `claude plugin tag`, and test the marketplace install from a clean machine.
 18. **Launch** before the new year.
-
-## M6: On duty
-
-19. **`on-duty`**: GitHard looking after a repo 24/7, in full auto or safe mode, on the project's own Claude account. The design is in `docs/on-duty.md`.
 
 ## Rules for building
 

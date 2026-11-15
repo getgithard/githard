@@ -11,7 +11,7 @@ The reasons behind each step are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
 
 ## Before CI runs
 
-1. **Get the full diff reviewed.** Dispatch the `fork-pr-reviewer` agent with the repo and the PR number, or with the diff file if that's what you have. It reads every line and returns a verdict. If you can't dispatch it, read `gh pr diff <N>` yourself, all of it, against the same list in `${CLAUDE_PLUGIN_ROOT}/agents/fork-pr-reviewer.md`.
+1. **Read the full diff.** Work through `${CLAUDE_SKILL_DIR}/review-checklist.md`: read `gh pr diff <N>`, every line of it, and come out with a verdict.
 2. **Act on the verdict.**
    - `SAFE TO RUN CI`: approve the runs (step 3).
    - `OWNER MUST REVIEW`: anything under `.github/`, anything near secrets, or code that runs in CI goes to the owner. Give them the PR link and the findings, and don't approve until they say yes.
@@ -30,7 +30,7 @@ The reasons behind each step are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
 
 ## When the contributor pushes again
 
-A push dismisses approvals and puts CI back to waiting. Have the agent review the PR again, approve the runs on the new head, and re-approve the PR if it needs a review.
+A push dismisses approvals and puts CI back to waiting. Review the PR again, approve the runs on the new head, and re-approve the PR if it needs a review.
 
 ## DCO failures
 

@@ -223,3 +223,17 @@ Not ours, so leave them alone: a podman VM, a Playwright test server and a merge
 - Claude Code's safety check refuses to let me merge a PR that adds a spending workflow ("Merge Without Review"). James merges those himself.
 - `gh pr merge --delete-branch` switches the local clone to main, so a later `gh pr view` with no number fails. Name the PR number.
 - Nothing is running in the background.
+
+## 2026-11-15 22:41 UTC: GitHard is skills only
+
+**Done:**
+- James changed the plan: GitHard ships skills and nothing else, with no subagents and no bot. `on-duty`, its evals and its design doc are gone, along with the `fork-pr-reviewer` and `docs-auditor` agents and their two eval cases. Their checklists now sit beside their skills as `skills/fork-pr-safety/review-checklist.md` and `skills/docs-honesty/audit-checklist.md`, and Claude works through them in the session.
+- `merge-when-green.sh` loses `--allow-fork`, which only on-duty passed. A fork PR is always merged by hand.
+- `docs/design.md` records the decision. The plan, the architecture, the security model, the skills index and `using-githard` no longer mention agents or on-duty.
+- GitHard #87 (on-duty setup) is closed and milestone M6 is closed. keyparity#31 removes on-duty's workflow and config from keyparity.
+
+**Waiting on James:**
+- Merge keyparity#31, since it removes a workflow.
+- Then delete the two secrets it leaves behind at https://github.com/keyparity/keyparity/settings/secrets/actions: click the bin icon next to `CLAUDE_CODE_OAUTH_TOKEN` and next to `GITHARD_TOKEN`. Delete the `githard keyparity` fine-grained PAT, if there is one, at https://github.com/settings/personal-access-tokens.
+
+**Next:** back to the open issues, lowest first, in M2 and M5.

@@ -1,10 +1,6 @@
----
-name: docs-auditor
-description: Read-only audit of a project's docs against a release. Give it the repo, the release tag, and where the docs live. It compares the docs with the release's CLI help, schemas, release notes and links, and reports each claim that isn't true of that release. It never edits docs.
-tools: Bash, Read, Grep, Glob
----
+# Auditing docs against a release
 
-You check one project's docs against one release, and list every claim that isn't true of it. You are read-only: read files, read the release, run the released tool's help and version commands. Never edit, commit, comment or open issues. If asked to fix something, report it instead and say a person or the main session should make the change.
+The audit lists every claim in the docs that isn't true of one release. It only reads: read files, read the release, and run the released tool's help and version commands. Fix what it finds afterwards, in one PR.
 
 ## What to read
 
@@ -21,7 +17,7 @@ You check one project's docs against one release, and list every claim that isn'
 - A link, schema URL or install URL that's dead (4xx or 5xx). A link that doesn't answer at all is "unknown", not dead.
 - A version number in install docs that isn't this release.
 
-For links and flags, `${CLAUDE_PLUGIN_ROOT}/skills/docs-honesty/audit-docs.sh` checks both: `bash ${CLAUDE_PLUGIN_ROOT}/skills/docs-honesty/audit-docs.sh <DOCS> --tool <NAME> --help-cmd "<released tool> --help"`.
+For links and flags, run `audit-docs.sh` the way `SKILL.md` shows. It checks both.
 
 ## Report
 

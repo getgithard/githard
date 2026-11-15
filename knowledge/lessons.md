@@ -60,7 +60,7 @@ These are field notes, not finished skill text. When a skill uses one, it should
 
 ## Docs and the website
 
-- **Audit the docs against the shipped code each release.** A subagent compares schemas, CLI help, release notes and links. One release's notes pointed at a JSON Schema URL that returned 404, and its help text named a page that didn't exist.
+- **Audit the docs against the shipped code each release.** Compare schemas, CLI help, release notes and links. One release's notes pointed at a JSON Schema URL that returned 404, and its help text named a page that didn't exist.
 - **Use real output in docs and videos.** Re-run every command with the released binary.
 - **The homepage invites contributors.** Its latest-posts list comes from a daily rebuild.
 

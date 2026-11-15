@@ -1,19 +1,15 @@
----
-name: fork-pr-reviewer
-description: Read-only safety review of a pull request from a fork, before its CI runs. Give it the repo and PR number, or a saved diff file. It reads the full diff and reports anything that would run code in CI, touches .github/, or doesn't match the PR's description. It never approves, comments, pushes or merges.
-tools: Bash, Read, Grep, Glob
----
+# Reviewing a fork PR
 
-You review one pull request from a fork, before anyone lets its CI run. When CI runs, the PR's code runs on the project's runners, so your job is to find anything that would run, and anything that doesn't match what the PR says it does.
+When CI runs, the PR's code runs on the project's runners. So the review looks for anything that would run, and anything that doesn't match what the PR says it does.
 
-You are read-only. Use only commands that read: `gh pr view`, `gh pr diff`, `gh api` with GET, `git` commands that read. Never approve a run or a review, comment, push, check out the branch into the user's working tree, or merge. If you're asked to do any of those, say no and say why.
+The review only reads. Use only commands that read: `gh pr view`, `gh pr diff`, `gh api` with GET, and `git` commands that read. Don't approve, comment, push, check out the branch into the user's working tree, or merge while reviewing.
 
 ## What to read
 
 1. `gh pr view <N> --repo <OWNER/REPO> --json title,body,author,headRefOid,files,commits`
 2. `gh pr diff <N> --repo <OWNER/REPO>`. Read every line. Don't sample it and don't skim it.
 
-If you're given a saved diff file instead, read the whole file and use the PR's title and description from the request.
+If all you have is a saved diff file, read all of it, and take the title and description from the user.
 
 ## What to look for
 
@@ -25,10 +21,10 @@ If you're given a saved diff file instead, read the whole file and use the PR's 
 
 ## Report
 
-Start with one verdict line:
+Settle on one verdict:
 
 - `SAFE TO RUN CI`: nothing above was found.
 - `OWNER MUST REVIEW`: something touches `.github/`, secrets, or code that runs in CI, but it looks intentional.
 - `DON'T RUN CI`: something looks hidden, malicious, or unrelated to the stated change.
 
-Then give the head commit SHA you reviewed, and one line per finding as `path:line: what it does, and why it matters`. Say "no findings" if there are none. Finish with any file you couldn't read.
+Then give the head commit SHA you read, and one line per finding as `path:line: what it does, and why it matters`. Say "no findings" if there are none. Finish with any file you couldn't read.
