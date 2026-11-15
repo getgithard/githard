@@ -231,9 +231,6 @@ Not ours, so leave them alone: a podman VM, a Playwright test server and a merge
 - `merge-when-green.sh` loses `--allow-fork`, which only on-duty passed. A fork PR is always merged by hand.
 - `docs/design.md` records the decision. The plan, the architecture, the security model, the skills index and `using-githard` no longer mention agents or on-duty.
 - GitHard #87 (on-duty setup) is closed and milestone M6 is closed. keyparity#31 removes on-duty's workflow and config from keyparity.
-
-**Waiting on James:**
-- Merge keyparity#31, since it removes a workflow.
-- Then delete the two secrets it leaves behind at https://github.com/keyparity/keyparity/settings/secrets/actions: click the bin icon next to `CLAUDE_CODE_OAUTH_TOKEN` and next to `GITHARD_TOKEN`. Delete the `githard keyparity` fine-grained PAT, if there is one, at https://github.com/settings/personal-access-tokens.
+- James merged keyparity#31 at 22:58 UTC and deleted both of its secrets. Nothing of on-duty is left on keyparity.
 
 **Next:** back to the open issues, lowest first, in M2 and M5.
