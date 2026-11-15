@@ -234,3 +234,24 @@ Not ours, so leave them alone: a podman VM, a Playwright test server and a merge
 - James merged keyparity#31 at 22:58 UTC and deleted both of its secrets. Nothing of on-duty is left on keyparity.
 
 **Next:** back to the open issues, lowest first, in M2 and M5.
+
+## 2026-11-15 23:02 UTC: save point, GitHard is skills only and nothing is running
+
+Done: #89 makes GitHard skills only. on-duty and both agents are gone, and their checklists now sit beside `fork-pr-safety` and `docs-honesty`. #91 records that on-duty is completely gone from keyparity: keyparity#31 is merged and both of its secrets are deleted. #87 and milestone M6 are closed. The fork-pr-safety and docs-honesty evals pass with the plugin, 6 of 6 cases.
+
+Next: James will say what's next at the start of the session. If he doesn't, take the lowest-numbered open issue in M2: #30, add `--dry-run` to `approve-runs.sh`. #90 is new: a docs-honesty eval case that beats the no-plugin baseline.
+
+### getgithard/githard
+- Assigned to me: #59 OpenSSF Best Practices: from passing to gold
+- Assigned to me: #15 Dogfood: build a new product's org and repo with GitHard alone
+- No open PRs, and nothing running in the background.
+
+### keyparity/keyparity
+- Nothing open from GitHard. The local clone at `~/Documents/GitHub/keyparity` still has the old `ci/on-duty` branch, which is safe to delete.
+
+Owed: nothing is waiting on James. He may still have the `githard keyparity` fine-grained PAT. It isn't used anywhere, so it can be deleted at https://github.com/settings/personal-access-tokens.
+
+Gotchas:
+- GitHard ships skills and nothing else (see `docs/design.md`). Don't propose subagents, bots or scheduled workflows.
+- Both docs-honesty eval cases also pass without the plugin, so they show nothing GitHard adds (#90).
+- The on-duty plan and spec in `docs/superpowers/` are local only (git-ignored) and out of date.
