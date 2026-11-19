@@ -7,8 +7,9 @@
 # A PR that fails or times out is reported and skipped. The queue carries on with the next one.
 if [ -z "${GITHARD_RUNNING_COPY:-}" ]; then
   copy=$(mktemp); cp "$0" "$copy"; cp "$(dirname "$0")/merge-when-green.sh" "$copy.mwg"
-  GITHARD_RUNNING_COPY=1 GITHARD_MWG="$copy.mwg" exec bash "$copy" "$@"
+  GITHARD_RUNNING_COPY=$copy GITHARD_MWG="$copy.mwg" exec bash "$copy" "$@"
 fi
+[ "$GITHARD_RUNNING_COPY" != "$0" ] || trap 'rm -f "$0" "$0.mwg"' EXIT
 set -uo pipefail
 repo=${1:?usage: bash merge-queue.sh OWNER/REPO PR [PR...]}; shift
 [ $# -gt 0 ] || { echo "usage: bash merge-queue.sh OWNER/REPO PR [PR...]"; exit 2; }

@@ -25,9 +25,10 @@ if [ $links = 1 ]; then
       while (match(line, /https?:\/\/[^] )"'"'"'<>`]+/)) { print FILENAME":"FNR":"substr(line, RSTART, RLENGTH); line=substr(line, RSTART+RLENGTH) } } }' "${files[@]}" | sed -E 's/[.,;:]+$//' | sort -t: -k3 -u |
   while IFS= read -r hit; do
     where=${hit%%:http*}; url=${hit#"$where":}
-    code=$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
+    code=$(curl -sIL --proto-redir =http,https -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
+    # The URLs come from docs anyone can edit, so redirects stay on http(s).
     # Some servers refuse HEAD; ask again with GET before calling a link dead.
-    [ "$code" -ge 400 ] 2>/dev/null && code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
+    [ "$code" -ge 400 ] 2>/dev/null && code=$(curl -sL --proto-redir =http,https -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
     # 401, 403 and 429 mean the site refused an automated check, not that the page is gone.
     case $code in
       (000) echo "unknown  $where  $url (no answer)" ;;

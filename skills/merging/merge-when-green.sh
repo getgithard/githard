@@ -11,8 +11,9 @@
 
 # Bash reads a script as it runs, so editing this file mid-run breaks the run. Run from a private copy.
 if [ -z "${GITHARD_RUNNING_COPY:-}" ]; then
-  copy=$(mktemp); cp "$0" "$copy"; GITHARD_RUNNING_COPY=1 exec bash "$copy" "$@"
+  copy=$(mktemp); cp "$0" "$copy"; GITHARD_RUNNING_COPY=$copy exec bash "$copy" "$@"
 fi
+[ "$GITHARD_RUNNING_COPY" != "$0" ] || trap 'rm -f "$0"' EXIT
 set -uo pipefail
 FLAKE='(HTTP|status|error)[^0-9]{0,12}5[0-9][0-9]|timed? ?out|ETIMEDOUT|ECONNRESET|connection reset|Could not resolve host|TLS handshake|unexpected EOF|Temporary failure in name resolution'
 # --classify reads a failed job's log on stdin and prints flake or real. check.sh tests it.
