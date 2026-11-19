@@ -172,8 +172,10 @@ GH
 # curl answers from curl_<URL>.json, so the network is never touched. sleep returns at once.
 cat > "$ud/bin/curl" <<'CURL'
 #!/usr/bin/env bash
-for a; do url=$a; done
-f=$GH_FIXTURES/curl_$(printf '%s' "$url" | tr -c 'A-Za-z0-9' _).json; [ -f "$f" ] && cat "$f"
+# With -w (a status-code check), the fixture holds the code, and no fixture means no answer.
+w=""; for a; do url=$a; [ "$a" = -w ] && w=1; done
+f=$GH_FIXTURES/curl_$(printf '%s' "$url" | tr -c 'A-Za-z0-9' _).json
+if [ -f "$f" ]; then cat "$f"; else [ -z "$w" ] || printf 000; exit 7; fi
 CURL
 printf '#!/bin/sh\n:\n' > "$ud/bin/sleep"
 chmod +x "$ud/bin/curl" "$ud/bin/sleep"
@@ -374,5 +376,49 @@ rc=0; got=$(stub bash skills/releases/verify-release.sh o/r v1.2.0 2>&1) || rc=$
 { [ $rc = 1 ] && grep -q "checksum doesn't match" <<<"$got"; } || { echo "verify-release.sh missed a bad checksum: exit $rc, got $got"; fail=1; }
 rm -f "$ud/release_view.json"; rc=0; stub bash skills/releases/verify-release.sh o/r v1.2.0 >/dev/null 2>&1 || rc=$?
 [ $rc = 1 ] || { echo "verify-release.sh with no checksum file: exit $rc"; fail=1; }
+# audit.sh reads the GitHub settings when it's given a repo.
+fx 'repos/o/r' '{"full_name":"o/r","default_branch":"main","has_discussions":true,"web_commit_signoff_required":false,"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}'
+fx 'repos/o/r/rules/branches/main' '[{"type":"pull_request"},{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":true}}]'
+fx 'repos/o/r/private-vulnerability-reporting' '{"enabled":false}'; fx 'repos/o/r/vulnerability-alerts' '{}'
+s=$(mktemp -d); cp -R skills/repo-setup/templates/. "$s"; touch "$s/README.md" "$s/LICENSE"
+got=$(cd "$s" && GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash "$here/skills/repo-setup/audit.sh" o/r 2>&1) || true; rm -rf "$s"
+for line in 'ok       main is PR-only' 'ok       required status checks' "missing  branches don't have to be up to date (strict policy is on)" \
+  'missing  private vulnerability reporting' 'ok       Discussions' 'ok       Dependabot alerts' 'ok       secret scanning with push protection' \
+  'missing  sign-off required on web commits'; do
+  grep -qxF "$line" <<<"$got" || { echo "audit.sh o/r didn't print: $line"; fail=1; }
+done
+# audit-docs.sh calls a 404 dead, and a 403 or no answer unknown.
+s=$(mktemp -d); printf 'See https://a.example/gone, https://b.example/login and https://c.example/slow.\nAlso https://d.example/ok.\n' > "$s/a.md"
+fx 'curl_https://a.example/gone' 404; fx 'curl_https://b.example/login' 403; fx 'curl_https://d.example/ok' 200
+rc=0; got=$(stub bash skills/docs-honesty/audit-docs.sh "$s" 2>&1) || rc=$?; rm -rf "$s"
+{ [ $rc = 1 ] && grep -q '^dead .*a.example/gone (404)' <<<"$got" && grep -q '^unknown .*b.example/login (403' <<<"$got" &&
+  grep -q '^unknown .*c.example/slow (no answer)' <<<"$got" && ! grep -q d.example <<<"$got"; } || { echo "audit-docs.sh link check: exit $rc, got $got"; fail=1; }
+rc=0; stub bash skills/docs-honesty/audit-docs.sh "$ud/bin" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "audit-docs.sh with no Markdown: exit $rc"; fail=1; }
+# issue-health.sh names each gap, and says how far the pool is below target.
+fx 'issue list' '[{"number":5,"title":"Fix sync","body":"It breaks.","milestone":null,"issueType":null,"assignees":[],"labels":[]}]'
+rc=0; got=$(stub bash skills/issues-and-roadmap/issue-health.sh o/r 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -qxF 'needs    #5 Fix sync  (no type, no milestone, no "Done when")' <<<"$got" &&
+  grep -qx 'pool     0 ready to pick up, target 10: scope 10 more' <<<"$got"; } || { echo "issue-health.sh on a bare issue: exit $rc, got $got"; fail=1; }
+rm -f "$ud/issue_list.json"; rc=0; stub bash skills/issues-and-roadmap/issue-health.sh o/r >/dev/null 2>&1 || rc=$?
+[ $rc = 2 ] || { echo "issue-health.sh when GitHub doesn't answer: exit $rc"; fail=1; }
+# traffic.sh appends a dated total and a line per referrer to the snapshot file.
+fx 'repos/o/r/traffic/popular/referrers' '[{"referrer":"news.example","count":4,"uniques":2}]'
+stub bash skills/growth/traffic.sh o/r "$ud/snap.tsv" >/dev/null 2>&1
+{ [ "$(wc -l < "$ud/snap.tsv" | tr -d ' ')" = 2 ] && grep -q $'\tnews.example\t4\t2$' "$ud/snap.tsv"; } || { echo "traffic.sh snapshot: $(cat "$ud/snap.tsv")"; fail=1; }
+rm -f "$ud/repos_o_r_traffic_views.json"; rc=0; stub bash skills/growth/traffic.sh o/r >/dev/null 2>&1 || rc=$?
+[ $rc = 2 ] || { echo "traffic.sh without push access: exit $rc"; fail=1; }
+# scorecard-check.sh sorts each check below 10 into fixable, needs others or not scored.
+fx 'curl_https://api.securityscorecards.dev/projects/github.com/o/r' '{"score":6,"date":"2026-11-01","repo":{"commit":"abcdef1"},"checks":[{"name":"Pinned-Dependencies","score":5,"reason":"r1"},{"name":"Code-Review","score":0,"reason":"r2"},{"name":"Signed-Releases","score":-1,"reason":"r3"},{"name":"License","score":10,"reason":"r4"}]}'
+got=$(stub bash skills/security-baseline/scorecard-check.sh o/r 2>&1)
+[ "$got" = 'score    6/10, from commit abcdef1 on 2026-11-01
+not scored   Signed-Releases: n/a. r3
+needs others Code-Review: 0/10. r2
+fixable      Pinned-Dependencies: 5/10. r1' ] || { echo "scorecard-check.sh check list: got $got"; fail=1; }
+rc=0; stub bash skills/security-baseline/scorecard-check.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "scorecard-check.sh with no result: exit $rc"; fail=1; }
+# Error paths answer "unknown" with exit 2, never a clean report.
+rc=0; stub bash skills/contributors/unanswered.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "unanswered.sh on a repo that won't answer: exit $rc"; fail=1; }
+fx 'repos/o/q/pulls/1' '{"base":{"ref":"main"},"head":{"sha":"x","repo":{"full_name":"o/q"}}}'
+rc=0; got=$(stub bash $mwg o/q 1 2>&1) || rc=$?
+{ [ $rc = 2 ] && grep -q "couldn't read the ruleset" <<<"$got"; } || { echo "merge-when-green.sh with no ruleset answer: exit $rc, got $got"; fail=1; }
 rm -rf "$ud"
 exit $fail

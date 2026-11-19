@@ -27,8 +27,8 @@ jobs:
         with:
           persist-credentials: false
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: statement coverage, at least 80%
-        run: bash scripts/coverage.sh 80
+      - name: statement coverage, at least 90% (gold)
+        run: bash scripts/coverage.sh 90
   dco:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
