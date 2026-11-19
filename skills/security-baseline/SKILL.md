@@ -17,7 +17,7 @@ Copy `${CLAUDE_SKILL_DIR}/templates/.github/workflows/scorecard.yml` into the re
 bash ${CLAUDE_SKILL_DIR}/scorecard-check.sh OWNER/REPO
 ```
 
-It lists every check below 10, lowest first. Each one is `fixable`, `needs others`, or `not scored` (the check doesn't apply yet, such as Signed-Releases before the first release). Exit 2 means there's no published result yet.
+It lists every check below 10, lowest first. Each one is `fixable`, `needs others`, or `not scored` (the check doesn't apply yet, such as Signed-Releases before the first release). Exit 2 means there's no published result yet. Add `--min 7` to exit 1 when the overall score drops below 7, so a workflow can catch it.
 
 ## Be honest about what needs other people
 
