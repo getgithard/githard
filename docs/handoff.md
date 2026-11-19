@@ -307,8 +307,33 @@ Gotchas:
 - A global git config can sign tags and commits, so eval scaffolds that tag must turn `tag.gpgSign` and `commit.gpgsign` off.
 - Nothing is running in the background.
 
-## 2026-11-19 05:10 UTC: scoreboard refreshed
+## 2026-11-19 04:53 UTC: scoreboard refreshed
 
 Done: a full eval run against v0.2.0 (50 cases, 3 runs per arm, $40.69). 150 of 150 runs pass with GitHard, and 76 of 150 without. githard-site#12 makes the scoreboard from that run with the new `scripts/scores.sh` (`bash scripts/scores.sh <run>/aggregate-result.json > www/data/scores.json`), so nobody types the numbers again. James has drafts for Show HN, r/ClaudeAI and a short social post to post under his own name.
 
 Next: still waiting on James for the bestpractices.dev answers (in a comment on #59), a second getgithard owner, and keyparity's public email.
+
+## 2026-11-19 05:06 UTC: save point, v0.2.0 is out and only #59 is open
+
+Done: everything since the last save point. v0.2.0 is published, verified and launched at https://githard.dev/launch/. The scoreboard was rebuilt from a full eval run: 150 of 150 runs pass with GitHard, and 76 of 150 without. `traffic.sh` says "1 view from 1 person" now (#117). James took the first traffic snapshot into `~/githard-traffic.tsv` before posting the launch. keyparity's org is complete: James set its public email (keyparity@sentrello.com), and it will never have its own domain, so run `org-audit.sh keyparity --skip "verified domain"`.
+
+Next: James will say. If he doesn't, these are open:
+1. #59: James enters the bestpractices.dev answers from the comment on #59, and finds a second owner for the getgithard org. The code side is done.
+2. A week after James posts the launch, run `bash skills/growth/traffic.sh getgithard/githard ~/githard-traffic.tsv` again and compare the referrers.
+3. The starter pool is empty (`issue-health.sh` reports 0 of 10). Scope new starter issues with `issues-and-roadmap`.
+
+### getgithard/githard
+- Assigned to me: #59 OpenSSF Best Practices: from passing to gold
+- No open PRs, and nothing running.
+
+### getgithard/githard-site
+- Nothing open.
+
+### keyparity/keyparity
+- Nothing open.
+
+Owed: James has the launch drafts for Show HN, r/ClaudeAI and a short social post. They were in this session's temporary scratchpad, so he should have copied them out.
+
+Gotchas:
+- Handoff times come from `date -u` or the commit, never a guess.
+- The podman machine is stopped. kcov needs it running: `podman machine start`.
