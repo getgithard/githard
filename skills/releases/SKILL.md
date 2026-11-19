@@ -1,6 +1,6 @@
 ---
 name: releases
-description: Use when preparing, cutting, verifying or publishing a release, writing or keeping release notes or a changelog as changes merge, adding checksums, signing or build attestations to release assets, tagging a Claude Code plugin version, or working through what has to happen after a release ships.
+description: Use when preparing, cutting, verifying or publishing a release, keeping the next release's draft notes up to date as changes merge (the writing skill writes the words), adding checksums, signing or build attestations to release assets, tagging a Claude Code plugin version, or working through what has to happen after a release ships.
 ---
 
 # Releases
