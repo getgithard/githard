@@ -12,6 +12,9 @@ while [ $# -gt 0 ]; do case $1 in --project) project=$2 ;; --repo) repo=$2 ;; --
 [ -n "$project" ] && [ -n "$repo" ] && [ -n "$owner" ] || { echo "--project, --repo and --owner are required"; exit 2; }
 src="$(cd "$(dirname "$0")" && pwd)/templates"
 report_to=${contact:-"email {{CONTACT_EMAIL}}"}
+# The values go into sed replacements, so &, # and \ must be literal, never sed syntax.
+esc() { printf '%s' "$1" | sed 's/[\\&#]/\\&/g'; }
+repo=$(esc "$repo"); project=$(esc "$project"); owner=$(esc "$owner"); report_to=$(esc "$report_to")
 cd "$dir" || exit 2
 (cd "$src" && find . -type f) | while IFS= read -r f; do
   f=${f#./}

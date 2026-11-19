@@ -112,6 +112,10 @@ s=$(mktemp -d); bash skills/repo-setup/fill-templates.sh "$s" --project jot --re
   { echo "fill-templates.sh left a placeholder"; fail=1; }
 grep -qx 'To report a problem, email c@jot.dev. Only the maintainers read it.' "$s/CODE_OF_CONDUCT.md" ||
   { echo "fill-templates.sh garbled the contact line: $(grep 'report a problem' "$s/CODE_OF_CONDUCT.md")"; fail=1; }
+# &, # and \ in a value stay literal, never sed syntax.
+t=$(mktemp -d); bash skills/repo-setup/fill-templates.sh "$t" --project jot --repo jotco/jot --owner sam --contact 'email c@jot.dev or #help & \1#w /dev/null' >/dev/null
+grep -qF 'email c@jot.dev or #help & \1#w /dev/null. Only' "$t/CODE_OF_CONDUCT.md" || { echo "fill-templates.sh mangled a contact with sed characters"; fail=1; }
+rm -rf "$t"
 rm -rf "$s"
 # Every tool the Brewfile lists is on the PATH (brew "python@3" provides python3).
 while read -r tool; do
@@ -286,6 +290,8 @@ rc=0; stub bash skills/merging/merge-queue.sh o/r >/dev/null 2>&1 || rc=$?; [ $r
 fx 'repos/o/r/contents/CONTRIBUTING.md' $'# Contributing\nRun the tests.\nAI-generated code must be disclosed in the PR.'
 got=$(stub bash skills/growth/ai-policy-check.sh o/r 2>&1)
 [ "$got" = $'== CONTRIBUTING.md\n3:AI-generated code must be disclosed in the PR.' ] || { echo "ai-policy-check.sh: got '$got'"; fail=1; }
+fx 'repos/o/r/contents/CONTRIBUTING.md' $'AI help is fine.\e]0;pwned\a'
+stub bash skills/growth/ai-policy-check.sh o/r 2>&1 | grep -q $'\e' && { echo "ai-policy-check.sh printed a control character"; fail=1; }
 fx 'repos/o/r/contents/CONTRIBUTING.md' 'Run the tests.'
 stub bash skills/growth/ai-policy-check.sh o/r 2>&1 | grep -q '^no policy found' || { echo "ai-policy-check.sh didn't say no policy found"; fail=1; }
 rc=0; stub bash skills/growth/ai-policy-check.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "ai-policy-check.sh on a missing repo: exit $rc"; fail=1; }

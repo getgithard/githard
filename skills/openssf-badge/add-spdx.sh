@@ -10,8 +10,9 @@
 # --check changes nothing and exits 1 if any file needs the lines.
 # Bash reads a script as it runs, and this one may edit itself, so it runs from a private copy.
 if [ -z "${GITHARD_RUNNING_COPY:-}" ]; then
-  copy=$(mktemp); cp "$0" "$copy"; GITHARD_RUNNING_COPY=1 exec bash "$copy" "$@"
+  copy=$(mktemp); cp "$0" "$copy"; GITHARD_RUNNING_COPY=$copy exec bash "$copy" "$@"
 fi
+[ "$GITHARD_RUNNING_COPY" != "$0" ] || trap 'rm -f "$0"' EXIT
 set -uo pipefail
 holder=${1:?usage: bash add-spdx.sh "HOLDER" SPDX-ID [--check] [PATH...]}
 spdx=${2:?usage: bash add-spdx.sh "HOLDER" SPDX-ID [--check] [PATH...]}
