@@ -298,7 +298,6 @@ Gotchas:
 **Waiting on James:**
 - Enter the bestpractices.dev answers from the comment on #59.
 - Find a second owner for the getgithard org (silver's `access_continuity`).
-- Decide whether to refresh the scoreboard, a full with-and-without eval run of about $30. The numbers on the site are from 8 and 9 Nov and include removed cases.
 - Post the launch anywhere else, under his own name. I can draft those posts.
 - Set a public email for keyparity at https://github.com/organizations/keyparity/settings/profile.
 
@@ -307,3 +306,9 @@ Gotchas:
 - `claude plugin eval --case` takes one case per run. Loop over cases.
 - A global git config can sign tags and commits, so eval scaffolds that tag must turn `tag.gpgSign` and `commit.gpgsign` off.
 - Nothing is running in the background.
+
+## 2026-11-19 05:10 UTC: scoreboard refreshed
+
+Done: a full eval run against v0.2.0 (50 cases, 3 runs per arm, $40.69). 150 of 150 runs pass with GitHard, and 76 of 150 without. githard-site#12 makes the scoreboard from that run with the new `scripts/scores.sh` (`bash scripts/scores.sh <run>/aggregate-result.json > www/data/scores.json`), so nobody types the numbers again. James has drafts for Show HN, r/ClaudeAI and a short social post to post under his own name.
+
+Next: still waiting on James for the bestpractices.dev answers (in a comment on #59), a second getgithard owner, and keyparity's public email.
