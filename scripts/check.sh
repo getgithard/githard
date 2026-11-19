@@ -223,7 +223,7 @@ stub bash skills/growth/traffic.sh o/r 2>&1 | grep -qx 'pages    none yet' || { 
 printf '#!/bin/sh\ncat "$GH_FIXTURES/scorecard.json"\n' > "$ud/bin/curl"; chmod +x "$ud/bin/curl"
 printf '{"score":7.3,"date":"2026-11-01","repo":{"commit":"abcdef1234"},"checks":[]}' > "$ud/scorecard.json"
 for c in ":0" "--min 7:0" "--min 7.5:1" "--min ten:2"; do
-  rc=0; stub bash skills/security-baseline/scorecard-check.sh o/r ${c%:*} >/dev/null 2>&1 || rc=$?
+  read -ra a <<<"${c%:*}"; rc=0; stub bash skills/security-baseline/scorecard-check.sh o/r ${a[@]+"${a[@]}"} >/dev/null 2>&1 || rc=$?
   [ $rc = "${c##*:}" ] || { echo "scorecard-check.sh ${c%:*} on 7.3: exit $rc, wanted ${c##*:}"; fail=1; }
 done
 rm -rf "$ud"
