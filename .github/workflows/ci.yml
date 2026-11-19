@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     container: kcov/kcov@sha256:481289ae32e55e5b733019515acd10948a4f76dfed381765577db909664fc603 # v43
     steps:
-      - run: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git jq curl python3 rsync gh
+      - run: apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git jq curl python3 rsync gh shellcheck
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

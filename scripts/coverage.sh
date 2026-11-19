@@ -6,8 +6,9 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 min=${1:-80}; out=${2:-$(mktemp -d)}
-kcov --include-path="$PWD/skills" --include-pattern=.sh --bash-parse-files-in-dir="$PWD/skills" "$out" scripts/check.sh >/dev/null 2>&1 ||
-  echo "note     check.sh failed under kcov, so the numbers below may be low"
+# Coverage from a failing run proves nothing, so a failure in check.sh fails this too.
+log=$(kcov --include-path="$PWD/skills" --include-pattern=.sh --bash-parse-files-in-dir="$PWD/skills" "$out" scripts/check.sh 2>&1) ||
+  { echo "$log"; echo "failed   check.sh failed under kcov"; exit 1; }
 cov=$(find "$out" -path "*/kcov-merged/coverage.json" -o -path "*/check.sh*/coverage.json" | sort | tail -1)
 [ -n "$cov" ] || { echo "unknown  kcov wrote no coverage.json to $out"; exit 2; }
 jq -r --arg root "$PWD/" '.files | sort_by(.percent_covered | tonumber)[]
