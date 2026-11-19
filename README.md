@@ -82,7 +82,7 @@ In Claude Code:
 
 Then ask for what you want in your own words: "set this repo up properly", "can I approve CI on this fork PR?", "cut a release". GitHard picks the skill that fits. If the skills don't show up straight away, start a new session.
 
-The [first release](https://github.com/getgithard/githard/releases/tag/githard--v0.1.0) is `githard--v0.1.0`. Its source is also published as a tarball with a build attestation, which you can check with `gh attestation verify githard--v0.1.0.tar.gz --repo getgithard/githard`. You can also rebuild it yourself and get the same bytes. From a clone, `git archive --format=tar.gz --prefix=githard--v0.1.0/ githard--v0.1.0 | shasum -a 256` prints the hash in the release's `SHA256SUMS`.
+The current release is [`githard--v0.2.0`](https://github.com/getgithard/githard/releases/tag/githard--v0.2.0), and the [launch post](https://githard.dev/launch/) says what's in it. Its source is also published as a tarball with a build attestation, which you can check with `gh attestation verify githard--v0.2.0.tar.gz --repo getgithard/githard`. You can also rebuild it yourself and get the same bytes. From a clone, `git archive --format=tar.gz --prefix=githard--v0.2.0/ githard--v0.2.0 | shasum -a 256` prints the hash in the release's `SHA256SUMS`.
 
 ## Contributing
 
