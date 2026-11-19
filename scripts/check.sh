@@ -422,9 +422,23 @@ needs others Code-Review: 0/10. r2
 fixable      Pinned-Dependencies: 5/10. r1' ] || { echo "scorecard-check.sh check list: got $got"; fail=1; }
 rc=0; stub bash skills/security-baseline/scorecard-check.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "scorecard-check.sh with no result: exit $rc"; fail=1; }
 # Error paths answer "unknown" with exit 2, never a clean report.
+for c in "--now" "--now 18-11-2026" "--now 2026-13-45"; do rc=0; read -ra a <<<"$c"; stub bash skills/contributors/unanswered.sh o/r "${a[@]}" >/dev/null 2>&1 || rc=$?
+  [ $rc = 2 ] || { echo "unanswered.sh $c: exit $rc, wanted 2"; fail=1; }; done
 rc=0; stub bash skills/contributors/unanswered.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "unanswered.sh on a repo that won't answer: exit $rc"; fail=1; }
 fx 'repos/o/q/pulls/1' '{"base":{"ref":"main"},"head":{"sha":"x","repo":{"full_name":"o/q"}}}'
 rc=0; got=$(stub bash $mwg o/q 1 2>&1) || rc=$?
 { [ $rc = 2 ] && grep -q "couldn't read the ruleset" <<<"$got"; } || { echo "merge-when-green.sh with no ruleset answer: exit $rc, got $got"; fail=1; }
+# Dynamic analysis: every script, run with odd arguments, may refuse them but never hit a bash or jq
+# runtime error. It runs in a scratch folder against the stand-ins, so nothing outside it changes.
+long=$(printf 'x%.0s' {1..5000}); fz=$(mktemp -d)
+for f in skills/*/*.sh; do
+  for args in "" "''" "' '" "-" "--" "'*'" "o/r" "o/r ''" "o/r 1 --head" "o/r --now" "o/r --min" "o/r 1 --dry-run --head" "'o/r;id' '1;id'" "o/r -1" "$long"; do
+    eval "set -- $args"
+    err=$(cd "$fz" && GH_FIXTURES=$ud PATH="$ud/bin:$PATH" bash "$here/$f" "$@" 2>&1 >/dev/null </dev/null) || true
+    grep -qiE 'unbound variable|syntax error|command not found|integer expression|bad substitution|ambiguous redirect|division by 0|jq: error' <<<"$err" &&
+      { echo "$f ${args:0:40}: $(grep -iE 'unbound|syntax|not found|integer|substitution|redirect|division|jq: error' <<<"$err" | head -1)"; fail=1; }
+  done
+done
+rm -rf "$fz"
 rm -rf "$ud"
 exit $fail

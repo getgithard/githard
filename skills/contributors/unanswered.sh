@@ -15,7 +15,9 @@ repo=${1:?usage: bash unanswered.sh OWNER/REPO}
 epoch() { date -u -j -f %Y-%m-%dT%H:%M:%SZ "$1" +%s 2>/dev/null || date -u -d "$1" +%s; }
 now=$(date -u +%s)
 # midnight, spelled out: macOS date -j fills a missing time with the current one
-[ "${2:-}" = --now ] && now=$(epoch "${3}T00:00:00Z")
+if [ "${2:-}" = --now ]; then
+  [[ ${3:-} =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && now=$(epoch "${3}T00:00:00Z") || { echo "--now needs a date as YYYY-MM-DD"; exit 2; }
+fi
 maint='^(OWNER|MEMBER|COLLABORATOR)$'
 
 prs=$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" \
