@@ -226,5 +226,9 @@ for c in ":0" "--min 7:0" "--min 7.5:1" "--min ten:2"; do
   read -ra a <<<"${c%:*}"; rc=0; stub bash skills/security-baseline/scorecard-check.sh o/r ${a[@]+"${a[@]}"} >/dev/null 2>&1 || rc=$?
   [ $rc = "${c##*:}" ] || { echo "scorecard-check.sh ${c%:*} on 7.3: exit $rc, wanted ${c##*:}"; fail=1; }
 done
+# issue-health.sh counts a writers-wanted issue toward the pool
+fx 'issue list' '[{"number":3,"title":"Write the sync page","body":"Done when: it ships","milestone":{"title":"M1"},"issueType":{"name":"Task"},"assignees":[],"labels":[{"name":"writers wanted"}]}]'
+stub bash skills/issues-and-roadmap/issue-health.sh o/r 1 2>&1 | grep -qx 'pool     1 ready to pick up, target 1' ||
+  { echo "issue-health.sh didn't count a writers-wanted issue in the pool"; fail=1; }
 rm -rf "$ud"
 exit $fail
