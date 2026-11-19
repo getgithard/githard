@@ -20,7 +20,7 @@ The reasons behind each step are in `${CLAUDE_PLUGIN_ROOT}/knowledge/lessons.md`
    ```sh
    bash ${CLAUDE_SKILL_DIR}/approve-runs.sh OWNER/REPO <N> --head <SHA>
    ```
-   `<SHA>` is the head commit the review read (`gh pr view <N> --json headRefOid`). If someone pushed since, the script refuses, and the runs on the new commit wait for a look.
+   `<SHA>` is the head commit the review read (`gh pr view <N> --json headRefOid`). If someone pushed since, the script refuses, and the runs on the new commit wait for a look. Add `--dry-run` to see which runs it would approve without approving any.
 
 ## Never
 

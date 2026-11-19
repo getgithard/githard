@@ -201,5 +201,8 @@ fx 'repos/o/r/actions/runs/11/approve' '{}'
 { [ $rc = 2 ] && ! grep -q approve "$ud/calls"; } || { echo "approve-runs.sh approved runs after the head moved: exit $rc"; fail=1; }
 : > "$ud/calls"; rc=0; stub bash skills/fork-pr-safety/approve-runs.sh o/r 9 --head "$H" >/dev/null 2>&1 || rc=$?
 { [ $rc = 0 ] && grep -qx 'api -X POST repos/o/r/actions/runs/11/approve' "$ud/calls"; } || { echo "approve-runs.sh --head didn't approve at the head: exit $rc"; fail=1; }
+# approve-runs.sh --dry-run names the runs and approves none
+: > "$ud/calls"; rc=0; got=$(stub bash skills/fork-pr-safety/approve-runs.sh o/r 9 --head "$H" --dry-run 2>&1) || rc=$?
+{ [ $rc = 0 ] && grep -q 'would approve run 11' <<<"$got" && ! grep -q approve "$ud/calls"; } || { echo "approve-runs.sh --dry-run approved runs or didn't list them: exit $rc"; fail=1; }
 rm -rf "$ud"
 exit $fail
