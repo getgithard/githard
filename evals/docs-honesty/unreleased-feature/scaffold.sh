@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A CLI whose README documents a flag that merged after the v1.2.0 tag.
 set -euo pipefail
 git init -q .

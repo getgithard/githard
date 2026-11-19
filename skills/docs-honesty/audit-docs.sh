@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Find claims in docs that aren't true of the released version.
 # Usage: bash audit-docs.sh DOCS_PATH [--tool NAME --help-cmd "CMD"] [--no-links]
 #   Links: every http(s) URL in DOCS_PATH must answer below 400. A URL that doesn't answer at all,

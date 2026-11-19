@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 set -euo pipefail
 git init -q .
 mkdir -p docs

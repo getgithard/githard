@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Check a draft release before anyone publishes it.
 # Usage: bash verify-release.sh OWNER/REPO TAG [--pattern GLOB] [--version-cmd "CMD"] [--smoke "CMD"]
 #   Downloads every asset (or those matching --pattern), checks each against the checksum file

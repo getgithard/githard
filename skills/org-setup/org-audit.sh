@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Audit a GitHub org against GitHard's org-setup checklist.
 # Usage: bash org-audit.sh ORG [--skip "ITEM"]...
 #   --skip marks an item as off on purpose (such as "verified domain" for an org with no domain):

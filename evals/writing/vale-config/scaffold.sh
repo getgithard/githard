@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A small CLI repo whose only writing rules live in a Vale config, and they disagree with GitHard's voice.
 set -euo pipefail
 git init -q .

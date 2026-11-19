@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Show a repo's published OpenSSF Scorecard, check by check, lowest first.
 # Usage: bash scorecard-check.sh OWNER/REPO [--min N]
 # With --min, it exits 1 when the overall score is below N, so a workflow can catch a drop.

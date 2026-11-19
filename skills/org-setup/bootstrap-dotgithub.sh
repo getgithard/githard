@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Create or update an org's public .github repo from a local folder. Safe to run again.
 # Usage: bash bootstrap-dotgithub.sh ORG DIR
 #   If main is protected, it pushes a branch and opens a PR instead.

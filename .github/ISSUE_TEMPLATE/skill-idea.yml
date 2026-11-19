@@ -1,3 +1,5 @@
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 name: Skill idea
 description: Something GitHard should know how to do.
 body:

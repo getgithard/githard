@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Where a repo's visitors came from over the last 14 days, and the pages they read, to judge each channel on results.
 # Usage: bash traffic.sh OWNER/REPO [SNAPSHOT_FILE]
 # Needs push access (GitHub only shows traffic to people who can push). With SNAPSHOT_FILE, it

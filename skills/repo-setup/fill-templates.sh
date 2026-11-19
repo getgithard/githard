@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Copy repo-setup's templates into a repo and fill in every placeholder. Keeps files the repo already has.
 # Usage: bash fill-templates.sh DIR --project NAME --repo OWNER/REPO --owner HANDLE --contact "TEXT"
 #   --contact finishes "To report a problem, " in CODE_OF_CONDUCT.md, e.g. "email conduct@example.com".

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Pick the Claude Code plugins (skills, MCP servers, language servers) a project needs.
 # Usage: bash toolkit.sh [DIR] [--apply]
 #   Looks at DIR's files (default: current folder) and prints one line per recommended plugin,

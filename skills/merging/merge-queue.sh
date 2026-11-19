@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Merge several PRs one at a time, in the order given, each once it's green.
 # Usage: bash merge-queue.sh OWNER/REPO PR [PR...]
 # One runner, never several in parallel: parallel pollers share one API limit and starve each other.

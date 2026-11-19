@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Work out the next version from Conventional Commit messages.
 # Usage: git log --format='%s%n%b' LAST_TAG..HEAD | bash next-version.sh LAST_TAG
 # LAST_TAG is [prefix--]vX.Y.Z; a prefix is kept. Prints vX.Y.Z (any feat is a minor bump, else any

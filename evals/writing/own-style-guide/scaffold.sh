@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A small CLI repo with its own writing rules in CONTRIBUTING.md that disagrees with GitHard's voice.
 set -euo pipefail
 git init -q .

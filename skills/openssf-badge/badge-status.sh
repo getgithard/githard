@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # What stands between a project and the next OpenSSF Best Practices badge level.
 # Usage: bash badge-status.sh PROJECT_ID [passing|silver|gold]
 #   PROJECT_ID is the number in https://www.bestpractices.dev/projects/PROJECT_ID.

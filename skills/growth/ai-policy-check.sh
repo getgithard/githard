@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Show what a project says about AI-assisted contributions, before anyone contributes to it.
 # Usage: bash ai-policy-check.sh OWNER/REPO
 # Reads the usual policy files and prints each line that mentions AI, with its file.

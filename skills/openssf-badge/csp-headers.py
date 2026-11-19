@@ -1,3 +1,5 @@
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 """Write a _headers file with hardened HTTP headers for a static site, for the gold
 criterion hardened_site. Cloudflare Pages and Netlify both read _headers.
 

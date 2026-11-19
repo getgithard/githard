@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Approve the workflow runs waiting on a fork PR, but only those on its current head commit.
 # Usage: bash approve-runs.sh OWNER/REPO PR_NUMBER [--head SHA] [--dry-run]
 # A run on an older commit stays waiting, so code pushed after your review still needs a look.

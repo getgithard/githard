@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A brand-new Node CLI with only a README and package.json.
 set -euo pipefail
 git init -q .

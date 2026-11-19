@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Create a GitHub repo if it doesn't exist, and push a local folder's first commit to it. Safe to run again.
 # Usage: bash bootstrap-repo.sh OWNER/REPO DIR [--private] [--description "..."]
 #   DIR is a git repo with at least one commit on main. Its main goes to the new repo's main.
