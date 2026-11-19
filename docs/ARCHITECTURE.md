@@ -8,7 +8,8 @@ GitHard is a Claude Code plugin. There's no server and no build: it's Markdown i
 - **`skills/<name>/SKILL.md`:** one skill per job, such as `repo-setup`, `merging` or `releases`. Claude Code loads a skill when a request matches its description. A skill can ship scripts (`*.sh`, `*.py`) and templates beside it, and refers to them through `${CLAUDE_SKILL_DIR}`.
 - **`knowledge/`:** `lessons.md` holds the field notes every skill is built from, and `voice.md` the house voice. Skills point to them through `${CLAUDE_PLUGIN_ROOT}` instead of copying them.
 - **`evals/<skill>/<case>/`:** eval cases (`prompt.md`, graders, sometimes a `scaffold.sh` that builds a throwaway repo) run with `claude plugin eval`.
-- **`scripts/check.sh`:** the checks CI runs without credentials.
+- **`scripts/check.sh`:** the checks CI runs without credentials. Every script under `skills/` runs there against stand-ins for `gh`, `curl` and github.com, so no test touches the network.
+- **`scripts/coverage.sh`:** statement coverage of those scripts, measured with kcov while `check.sh` runs. CI fails below 80%. kcov works best on Linux, so locally run it in the `kcov/kcov` image.
 - **`Brewfile`:** the tools the scripts need (`bash`, `gh`, `git`, `curl`, `jq`, `python3`, `rsync`, `shellcheck`). `brew bundle` installs them, and `check.sh` makes sure each one is there.
 
 ## How a request flows
