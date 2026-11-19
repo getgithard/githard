@@ -284,3 +284,26 @@ Gotchas:
 - Never write "close", "fix" or "resolve" right before `#N` in a PR body you don't want to close the issue, even after "doesn't". It closed #90, which is reopened now.
 - When you test a mutant, copy the file aside and copy it back. `git checkout -- FILE` throws away the uncommitted fix.
 - Nothing is running in the background.
+
+## 2026-11-19 04:25 UTC: v0.2.0 shipped and launched, only #59 left
+
+**Done:**
+- #77: `scripts/coverage.sh` runs `check.sh` under kcov, and CI's `coverage` job uses the `kcov/kcov` image pinned by digest. Every script under `skills/` now runs against stand-ins for `gh`, `curl`, `sleep` and github.com. Coverage is 90.6%, and CI fails below 90.
+- #59, the code side: SPDX lines on every file except the templates (#104), 90% coverage (#105), the reproducible-build command in the README, a security review in `docs/SECURITY-MODEL.md` with four fixes (#107), and argument fuzzing in `check.sh` (#108). The bestpractices.dev answers are in a comment on #59.
+- Bugs found and fixed: a non-Actions check counted as a flake in `merge-when-green.sh`, `add-spdx.sh` editing itself, `unanswered.sh --now` with no date or a bad one, sed injection in `fill-templates.sh`, `release.yml` deleting a published release on a re-run, redirects in `audit-docs.sh`, control characters in `ai-policy-check.sh`, and leftover temp copies.
+- #90 (`main-ahead` eval, Δ +0.33), #52 (the issue example), #112 (release-notes routing: writing fired 6 of 6).
+- #15 closed: the keyparity repo audit is clean.
+- #18: v0.2.0 is published and verified. The launch post is at https://githard.dev/launch/, and the README links it. The site no longer mentions the removed agents.
+
+**Waiting on James:**
+- Enter the bestpractices.dev answers from the comment on #59.
+- Find a second owner for the getgithard org (silver's `access_continuity`).
+- Decide whether to refresh the scoreboard, a full with-and-without eval run of about $30. The numbers on the site are from 8 and 9 Nov and include removed cases.
+- Post the launch anywhere else, under his own name. I can draft those posts.
+- Set a public email for keyparity at https://github.com/organizations/keyparity/settings/profile.
+
+**Gotchas:**
+- Run kcov in Linux: `podman run --rm -v "$PWD":/src:ro docker.io/kcov/kcov:latest ...`. On macOS it misses child scripts. The podman machine is stopped now.
+- `claude plugin eval --case` takes one case per run. Loop over cases.
+- A global git config can sign tags and commits, so eval scaffolds that tag must turn `tag.gpgSign` and `commit.gpgsign` off.
+- Nothing is running in the background.
