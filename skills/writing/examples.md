@@ -70,6 +70,35 @@ After:
 
 Why: the person reading a changelog is deciding whether an upgrade breaks their setup. Put what they have to do first, say which behaviour changes under their fingers, and link every line to its issue. "Various fixes" tells them nothing, so they have to read the commits.
 
+## Issue
+
+Before:
+
+> Search is broken
+
+After:
+
+> **Search misses notes with an accent in the title**
+>
+> I searched for `cafe` and Jot found nothing, though I have a note called "Café list". Searching for `café` finds it.
+>
+> **Steps to reproduce**
+>
+> 1. Make a note titled `Café list`.
+> 2. Run `jot search cafe`.
+>
+> **Expected:** "Café list" shows up.
+> **Actual:** `no matches`.
+>
+> Jot 2.1.0 on macOS 15. Notes made on 2.0 behave the same way.
+>
+> **Done when**
+>
+> - [ ] `jot search cafe` finds "Café list"
+> - [ ] a test covers a title with an accent, and one without
+
+Why: "broken" makes the reader guess what you did, what you saw and what you wanted. Give them the steps, so a stranger can see the bug on their own machine in a minute. Then the "Done when" tells them when they can stop.
+
 ## Reply to a contributor
 
 Before:
