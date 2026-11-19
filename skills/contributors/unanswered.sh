@@ -10,8 +10,10 @@
 # means "unknown", never "nothing owed", so it exits 2 instead of 0.
 set -uo pipefail
 repo=${1:?usage: bash unanswered.sh OWNER/REPO}
+epoch() { date -u -j -f %Y-%m-%dT%H:%M:%SZ "$1" +%s 2>/dev/null || date -u -d "$1" +%s; }
 now=$(date -u +%s)
-[ "${2:-}" = --now ] && now=$(date -u -j -f %Y-%m-%d "$3" +%s 2>/dev/null || date -u -d "$3" +%s)
+# midnight, spelled out: macOS date -j fills a missing time with the current one
+[ "${2:-}" = --now ] && now=$(epoch "${3}T00:00:00Z")
 maint='^(OWNER|MEMBER|COLLABORATOR)$'
 
 prs=$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" \
@@ -20,7 +22,7 @@ prs=$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" \
 # No open PRs is fine, but only if the repo answers; the issue check below still runs.
 [ -z "$prs" ] && { gh api "repos/$repo" --jq .full_name >/dev/null 2>&1 || { echo "unknown  no answer for $repo"; exit 2; }; }
 
-days_since() { local t; t=$(date -u -j -f %Y-%m-%dT%H:%M:%SZ "$1" +%s 2>/dev/null || date -u -d "$1" +%s); echo $(( (now - t) / 86400 )); }
+days_since() { local t; t=$(epoch "$1"); echo $(( (now - t) / 86400 )); }
 
 status=0
 while IFS=$'\t' read -r n who updated url; do

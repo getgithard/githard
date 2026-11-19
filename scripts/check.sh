@@ -204,5 +204,13 @@ fx 'repos/o/r/actions/runs/11/approve' '{}'
 # approve-runs.sh --dry-run names the runs and approves none
 : > "$ud/calls"; rc=0; got=$(stub bash skills/fork-pr-safety/approve-runs.sh o/r 9 --head "$H" --dry-run 2>&1) || rc=$?
 { [ $rc = 0 ] && grep -q 'would approve run 11' <<<"$got" && ! grep -q approve "$ud/calls"; } || { echo "approve-runs.sh --dry-run approved runs or didn't list them: exit $rc"; fail=1; }
+# unanswered.sh counts quiet days from --now: 45 days back is 45, a second short of 44 is 43
+fx 'repos/o/r/issues?state=open&per_page=100' '[]'; fx 'repos/o/r/pulls/20/reviews' '[]'
+fx 'repos/o/r/issues/20/comments' '[{"author_association":"MEMBER"}]'
+for d in 2026-10-04T00:00:00Z:45 2026-10-05T00:00:01Z:43; do
+  fx 'repos/o/r/pulls?state=open&per_page=100' "[{\"number\":20,\"author_association\":\"NONE\",\"user\":{\"login\":\"sam\",\"type\":\"User\"},\"updated_at\":\"${d%:*}\",\"html_url\":\"p20\"}]"
+  got=$(stub bash skills/contributors/unanswered.sh o/r --now 2026-11-18 2>&1) || true
+  [ "$got" = "check-in    #20 @sam  quiet for ${d##*:} days  p20" ] || { echo "unanswered.sh day count from ${d%:*}: got '$got'"; fail=1; }
+done
 rm -rf "$ud"
 exit $fail
