@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Check a site's HTTP hardening headers, for the gold criterion hardened_site.
 # Usage: bash check-headers.sh URL [URL...]
 # Each header must be present with a nonpermissive value:

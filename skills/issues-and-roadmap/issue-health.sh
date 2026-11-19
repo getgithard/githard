@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Check a repo's open issues for the metadata people need to pick one up.
 # Usage: bash issue-health.sh OWNER/REPO [POOL_TARGET]
 # One line per open issue that lacks a type, a milestone, or a "Done when" line.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # The checks CI can run without Claude Code: the manifests parse and agree,
 # and every skill has the frontmatter Claude Code needs.
 set -euo pipefail
@@ -89,6 +91,13 @@ s=$(mktemp -d); here=$PWD
   grep -q 'SPDX-License-Identifier: MIT' a.sh && bash "$here/skills/openssf-badge/add-spdx.sh" "Test" MIT --check ) ||
   { echo "add-spdx.sh didn't add headers cleanly"; fail=1; }
 rm -rf "$s"
+# add-spdx.sh can add lines to itself mid-run without breaking, and every file here outside the
+# templates (which go into other people's repos) carries the lines.
+s=$(mktemp -d)
+( cd "$s" && git init -q && grep -v '^# \(Copyright\|SPDX\)' "$here/skills/openssf-badge/add-spdx.sh" > add-spdx.sh && git add add-spdx.sh &&
+  bash add-spdx.sh "Test" MIT >/dev/null 2>&1 && grep -q 'SPDX-License-Identifier: MIT' add-spdx.sh ) || { echo "add-spdx.sh broke while adding lines to itself"; fail=1; }
+rm -rf "$s"
+bash skills/openssf-badge/add-spdx.sh "James Conway" MIT --check . ':!skills/*/templates/*' || { echo "files above need: bash skills/openssf-badge/add-spdx.sh \"James Conway\" MIT . ':!skills/*/templates/*'"; fail=1; }
 python3 -c "import ast,sys; ast.parse(open('skills/openssf-badge/csp-headers.py').read())" || { echo "csp-headers.py doesn't parse"; fail=1; }
 # agent-toolkit: a TypeScript repo gets the TypeScript language server, and --apply writes only vetted plugins.
 s=$(mktemp -d); here=$PWD

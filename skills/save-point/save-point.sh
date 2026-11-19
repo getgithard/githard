@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Draft the facts for a handoff section, so the prose can't drift from what's true.
 # Usage: bash save-point.sh OWNER/REPO [OWNER/REPO...]
 # Prints a dated Markdown section: your open PRs, workflows still running, outside PRs owed a

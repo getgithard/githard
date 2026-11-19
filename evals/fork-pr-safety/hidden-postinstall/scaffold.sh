@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A fork PR titled as a README typo fix that also adds an install hook and edits CI.
 set -euo pipefail
 git init -q .

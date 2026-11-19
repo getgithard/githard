@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Add copyright and SPDX license lines to source files that lack them, for the gold criteria
 # copyright_per_file and license_per_file.
 # Usage: bash add-spdx.sh "COPYRIGHT HOLDER" SPDX-ID [--check] [PATH...]
@@ -6,6 +8,10 @@
 # Handles files whose comments start with # (shell, Python, YAML, Ruby...) or // (JS, TS, Go,
 # Rust, C...). Keeps a shebang line first. Skips files that already have SPDX-License-Identifier.
 # --check changes nothing and exits 1 if any file needs the lines.
+# Bash reads a script as it runs, and this one may edit itself, so it runs from a private copy.
+if [ -z "${GITHARD_RUNNING_COPY:-}" ]; then
+  copy=$(mktemp); cp "$0" "$copy"; GITHARD_RUNNING_COPY=1 exec bash "$copy" "$@"
+fi
 set -uo pipefail
 holder=${1:?usage: bash add-spdx.sh "HOLDER" SPDX-ID [--check] [PATH...]}
 spdx=${2:?usage: bash add-spdx.sh "HOLDER" SPDX-ID [--check] [PATH...]}

@@ -1,3 +1,5 @@
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # OpenSSF Scorecard: scores the repo's security practices each week and on every push to main,
 # publishes the result to api.securityscorecards.dev (which the badge reads), and shows
 # findings under Security > Code scanning.

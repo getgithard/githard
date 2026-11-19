@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A CLI whose README is right for v1.2.0, while its docs folder's install page still installs v1.1.0
 # and points at a schema asset the v1.2.0 release doesn't ship.
 set -euo pipefail

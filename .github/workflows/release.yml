@@ -1,3 +1,5 @@
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A githard--v* tag (made with `claude plugin tag --push`) builds a draft release:
 # the source as a tarball, SHA256SUMS, and a build attestation for both. Someone checks it with
 # skills/releases/verify-release.sh and publishes it. Nothing here publishes.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # List open PRs and issues from outside contributors that are owed something.
 # Usage: bash unanswered.sh OWNER/REPO [--now YYYY-MM-DD]
 #   unanswered  no comment or review from a maintainer yet (PRs), an outside issue with no

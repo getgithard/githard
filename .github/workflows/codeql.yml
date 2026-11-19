@@ -1,3 +1,5 @@
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # CodeQL: static analysis on every PR, every push to main, and weekly. Scorecard's SAST check
 # looks for it. Add the project's own languages to the matrix; "actions" checks the workflows.
 name: CodeQL

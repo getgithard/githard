@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # An existing repo whose PR workflow runs a fork's code with secrets.
 set -euo pipefail
 git init -q .

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A new Bun and TypeScript CLI on GitHub, with dependencies and no Claude Code setup yet.
 set -euo pipefail
 git init -q .

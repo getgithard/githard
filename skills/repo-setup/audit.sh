@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Audit a repo against GitHard's repo-setup checklist.
 # Usage: bash audit.sh [owner/repo]   (run from the repo's root)
 # File checks always run. GitHub settings are checked only when an owner/repo

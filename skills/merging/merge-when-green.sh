@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Merge one PR once every check its branch's ruleset requires has passed on the PR's current head.
 # Usage: bash merge-when-green.sh OWNER/REPO PR [--method squash|merge|rebase] [--timeout-min 60] [--require NAME]... [--head SHA]
 #        bash merge-when-green.sh --classify < failed-job.log

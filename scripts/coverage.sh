@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # Statement coverage of the skills' shell scripts, measured with kcov while scripts/check.sh runs.
 # Usage: bash scripts/coverage.sh [MIN_PERCENT] [OUT_DIR]
 # Every script under skills/ counts, run or not, so one with no test pulls the total down.

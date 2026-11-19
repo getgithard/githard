@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 James Conway
+# SPDX-License-Identifier: MIT
 # A year-old project with a stale bot, a thin CONTRIBUTING and no AI policy.
 set -euo pipefail
 git init -q .
