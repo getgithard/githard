@@ -244,7 +244,8 @@ done
 fx 'repos/o/r/traffic/views' '{"count":9,"uniques":3}'; fx 'repos/o/r/traffic/popular/referrers' '[]'
 fx 'repos/o/r/traffic/popular/paths' "[$(for i in 1 2 3 4 5 6; do printf '{"path":"/p%s","count":%s,"uniques":1},' $i $i; done | sed 's/,$//')]"
 got=$(stub bash skills/growth/traffic.sh o/r 2>&1 | grep '^page ')
-[ "$got" = "$(for i in 1 2 3 4 5; do echo "page    /p$i: $i views from 1 people"; done)" ] || { echo "traffic.sh didn't list five pages: got $got"; fail=1; }
+[ "$got" = "page    /p1: 1 view from 1 person
+$(for i in 2 3 4 5; do echo "page    /p$i: $i views from 1 person"; done)" ] || { echo "traffic.sh didn't list five pages: got $got"; fail=1; }
 fx 'repos/o/r/traffic/popular/paths' '[]'
 stub bash skills/growth/traffic.sh o/r 2>&1 | grep -qx 'pages    none yet' || { echo "traffic.sh didn't say there are no pages yet"; fail=1; }
 # scorecard-check.sh --min sets the exit code from the overall score, against a stand-in curl
