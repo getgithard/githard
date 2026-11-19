@@ -2,7 +2,7 @@
 # Check a repo's open issues for the metadata people need to pick one up.
 # Usage: bash issue-health.sh OWNER/REPO [POOL_TARGET]
 # One line per open issue that lacks a type, a milestone, or a "Done when" line.
-# Then the pool: open, unassigned issues labelled "good first issue" or "help wanted"
+# Then the pool: open, unassigned issues labelled "good first issue", "help wanted" or "writers wanted"
 # that say "Done when". Below POOL_TARGET (default 10) it says so and exits 1.
 # If GitHub doesn't answer, it says "unknown" and exits 2 rather than reporting a clean repo.
 set -uo pipefail
@@ -22,7 +22,7 @@ lines=$(jq -r '.[] |
 [ -n "$lines" ] && { echo "$lines"; status=1; }
 
 pool=$(jq '[.[] | select((.assignees | length) == 0)
-  | select(any(.labels[]; .name == "good first issue" or .name == "help wanted"))
+  | select(any(.labels[]; .name | IN("good first issue", "help wanted", "writers wanted")))
   | select((.body // "") | test("done when"; "i"))] | length' <<<"$issues")
 if [ "$pool" -lt "$target" ]; then
   echo "pool     $pool ready to pick up, target $target: scope $((target - pool)) more"; status=1
