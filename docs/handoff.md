@@ -255,3 +255,32 @@ Gotchas:
 - GitHard ships skills and nothing else (see `docs/design.md`). Don't propose subagents, bots or scheduled workflows.
 - Both docs-honesty eval cases also pass without the plugin, so they show nothing GitHard adds (#90).
 - The on-duty plan and spec in `docs/superpowers/` are local only (git-ignored) and out of date.
+
+## 2026-11-19 02:58 UTC: eight starter issues closed, the pool is empty
+
+**Done**, one PR each, all merged with CI green:
+- #93 (fixes #30): `approve-runs.sh --dry-run` lists the runs it would approve and approves none.
+- #94 (fixes #31): `unanswered.sh` counted `--now` from the current time of day on macOS, not midnight, because `date -j` fills a missing time from the clock. Both parsers now share one `epoch` function. `check.sh` pins the day count with a fixed `--now`.
+- #95 (fixes #32): the `writing/vale-config` eval. It passes with and without the plugin (Δ 0), so it's a guard only.
+- #96 (fixes #33): the `fork-pr-safety/repush` eval. Δ +0.33.
+- #97 (fixes #34): the `contributors/writers-wanted` eval. Δ +1.00, because the baseline suggests swag or pay every time.
+- #98 (fixes #49): `traffic.sh` lists the five most-visited pages.
+- #99 (fixes #50): `scorecard-check.sh --min N` exits 1 below N.
+- #100 (fixes #51): `issue-health.sh` counts `writers wanted` in the pool.
+- #101 (refs #90): the `docs-honesty/stale-install` eval. Δ 0 in two versions. #90 stays open, with notes on what to try next.
+
+`check.sh` now has stand-in `gh` and `curl` cases for each script above.
+
+**The starter pool is empty.** Every issue closed this session was labelled `good first issue`. The only open pool issue left is #52, a `writers wanted` issue, which I've left for a volunteer. `issue-health.sh` now reports a pool of 1 against a target of 10.
+
+**Next:**
+1. Scope new starter issues to refill the pool (`issues-and-roadmap`), or ask James whether to.
+2. #90, a docs-honesty case that beats the baseline. Grade the process (the report shape, refusing to guess), not the spotting.
+3. M5: #77 (statement coverage of the shell scripts), then #59, #15 and #18.
+
+**Gotchas:**
+- Run `git ls-files -z '*.sh' | xargs -0 shellcheck` before you push. CI runs it and `check.sh` doesn't.
+- macOS bash 3.2 under `set -u` treats an empty array as unbound. Use `${a[@]+"${a[@]}"}`.
+- Never write "close", "fix" or "resolve" right before `#N` in a PR body you don't want to close the issue, even after "doesn't". It closed #90, which is reopened now.
+- When you test a mutant, copy the file aside and copy it back. `git checkout -- FILE` throws away the uncommitted fix.
+- Nothing is running in the background.
