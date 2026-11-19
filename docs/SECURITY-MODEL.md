@@ -37,7 +37,7 @@
 
 | Date | Who | Scope | Result |
 |---|---|---|---|
-| 19 November 2026 | self-review: James Conway, with Claude Code | every script under `skills/`, every workflow, against the threat model and the boundaries above | 4 fixed, 3 accepted, below |
+| 19 November 2026 | self-review by Claude Code, in the maintainer's session | every script under `skills/`, every workflow, against the threat model and the boundaries above | 4 fixed, 3 accepted, below |
 
 Gold asks for a review within the last five years that covers the requirements and boundaries above. This one is a self-review. An outside review comes later.
 
