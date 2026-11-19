@@ -212,5 +212,12 @@ for d in 2026-10-04T00:00:00Z:45 2026-10-05T00:00:01Z:43; do
   got=$(stub bash skills/contributors/unanswered.sh o/r --now 2026-11-18 2>&1) || true
   [ "$got" = "check-in    #20 @sam  quiet for ${d##*:} days  p20" ] || { echo "unanswered.sh day count from ${d%:*}: got '$got'"; fail=1; }
 done
+# traffic.sh lists the five most-visited pages, or says there are none
+fx 'repos/o/r/traffic/views' '{"count":9,"uniques":3}'; fx 'repos/o/r/traffic/popular/referrers' '[]'
+fx 'repos/o/r/traffic/popular/paths' "[$(for i in 1 2 3 4 5 6; do printf '{"path":"/p%s","count":%s,"uniques":1},' $i $i; done | sed 's/,$//')]"
+got=$(stub bash skills/growth/traffic.sh o/r 2>&1 | grep '^page ')
+[ "$got" = "$(for i in 1 2 3 4 5; do echo "page    /p$i: $i views from 1 people"; done)" ] || { echo "traffic.sh didn't list five pages: got $got"; fail=1; }
+fx 'repos/o/r/traffic/popular/paths' '[]'
+stub bash skills/growth/traffic.sh o/r 2>&1 | grep -qx 'pages    none yet' || { echo "traffic.sh didn't say there are no pages yet"; fail=1; }
 rm -rf "$ud"
 exit $fail
