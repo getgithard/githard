@@ -149,12 +149,25 @@ cat > "$ud/bin/gh" <<'GH'
 #!/usr/bin/env bash
 # "api [-X M] [--paginate [--slurp]] PATH" answers from <PATH>.json and "pr list" from pr_list.json,
 # with any --jq applied. A fixture holding several arrays stands for several pages. Every call is logged.
+# A fixture that isn't JSON is printed as it is, --silent prints nothing, and "release download"
+# copies the files in release/ into the -D folder.
 printf '%s\n' "$*" >> "$GH_FIXTURES/calls"
 s=""; if [ "$1" = api ]; then shift; [ "$1" = -X ] && shift 2; [ "$1" = --paginate ] && shift; [ "$1" = --slurp ] && { s=1; shift; }; key=$1; else key="$1 $2"; fi
 f=$GH_FIXTURES/$(printf '%s' "$key" | tr -c 'A-Za-z0-9' _).json; [ -f "$f" ] || exit 1
-q=.; while [ $# -gt 0 ]; do [ "$1" = --jq ] && q=$2; shift; done
-if [ -n "$s" ]; then jq -s . "$f"; else jq -r "$q" "$f"; fi
+q=.; quiet=""; d=""; while [ $# -gt 0 ]; do case $1 in --jq) q=$2 ;; --silent) quiet=1 ;; -D) d=$2 ;; esac; shift; done
+[ -z "$d" ] || cp "$GH_FIXTURES"/release/* "$d"/
+[ -z "$quiet" ] || exit 0
+if ! jq -e . "$f" >/dev/null 2>&1; then cat "$f"
+elif [ -n "$s" ]; then jq -s . "$f"; else jq -r "$q" "$f"; fi
 GH
+# curl answers from curl_<URL>.json, so the network is never touched. sleep returns at once.
+cat > "$ud/bin/curl" <<'CURL'
+#!/usr/bin/env bash
+for a; do url=$a; done
+f=$GH_FIXTURES/curl_$(printf '%s' "$url" | tr -c 'A-Za-z0-9' _).json; [ -f "$f" ] && cat "$f"
+CURL
+printf '#!/bin/sh\n:\n' > "$ud/bin/sleep"
+chmod +x "$ud/bin/curl" "$ud/bin/sleep"
 chmod +x "$ud/bin/gh"
 fx() { printf '%s' "$2" > "$ud/$(printf '%s' "$1" | tr -c 'A-Za-z0-9' _).json"; }
 fx 'repos/o/r/pulls?state=open&per_page=100' '[]'
@@ -220,8 +233,7 @@ got=$(stub bash skills/growth/traffic.sh o/r 2>&1 | grep '^page ')
 fx 'repos/o/r/traffic/popular/paths' '[]'
 stub bash skills/growth/traffic.sh o/r 2>&1 | grep -qx 'pages    none yet' || { echo "traffic.sh didn't say there are no pages yet"; fail=1; }
 # scorecard-check.sh --min sets the exit code from the overall score, against a stand-in curl
-printf '#!/bin/sh\ncat "$GH_FIXTURES/scorecard.json"\n' > "$ud/bin/curl"; chmod +x "$ud/bin/curl"
-printf '{"score":7.3,"date":"2026-11-01","repo":{"commit":"abcdef1234"},"checks":[]}' > "$ud/scorecard.json"
+fx 'curl_https://api.securityscorecards.dev/projects/github.com/o/r' '{"score":7.3,"date":"2026-11-01","repo":{"commit":"abcdef1234"},"checks":[]}'
 for c in ":0" "--min 7:0" "--min 7.5:1" "--min ten:2"; do
   read -ra a <<<"${c%:*}"; rc=0; stub bash skills/security-baseline/scorecard-check.sh o/r ${a[@]+"${a[@]}"} >/dev/null 2>&1 || rc=$?
   [ $rc = "${c##*:}" ] || { echo "scorecard-check.sh ${c%:*} on 7.3: exit $rc, wanted ${c##*:}"; fail=1; }
@@ -230,5 +242,128 @@ done
 fx 'issue list' '[{"number":3,"title":"Write the sync page","body":"Done when: it ships","milestone":{"title":"M1"},"issueType":{"name":"Task"},"assignees":[],"labels":[{"name":"writers wanted"}]}]'
 stub bash skills/issues-and-roadmap/issue-health.sh o/r 1 2>&1 | grep -qx 'pool     1 ready to pick up, target 1' ||
   { echo "issue-health.sh didn't count a writers-wanted issue in the pool"; fail=1; }
+# merge-when-green.sh, end to end against the stand-ins: each case is "PR flags:exit:what it prints".
+B=$(printf 'b%.0s' {1..40}); fx rate_limit '{"resources":{"core":{"remaining":10,"reset":0}}}'
+pr() { fx "repos/o/r/pulls/$1" "{\"merged\":$2,\"state\":\"$3\",\"base\":{\"ref\":\"main\"},\"head\":{\"sha\":\"$4\",\"repo\":{\"full_name\":\"o/r\"}}}"; }
+runs() { fx "repos/o/r/commits/$1/check-runs?per_page=100" "{\"check_runs\":[{\"name\":\"ci\",\"status\":\"completed\",\"conclusion\":\"$2\",\"details_url\":\"$3\"}]}"; }
+mwg_case() {
+  local want_rc=$1 want=$2; shift 2; rc=0; got=$(stub bash $mwg o/r "$@" 2>&1) || rc=$?
+  { [ $rc = "$want_rc" ] && grep -q "$want" <<<"$got"; } || { echo "merge-when-green.sh $*: exit $rc, wanted $want_rc and '$want', got: $got"; fail=1; }
+}
+pr 31 false open "$B"; runs "$B" success x/runs/5
+mwg_case 0 "green on bbbbbbb, merging" 31 --require ci --method squash
+pr 32 true closed "$B"; mwg_case 0 "already merged" 32
+pr 33 false closed "$B"; mwg_case 1 "closed without merging" 33
+pr 34 false open "$B"; mwg_case 2 "head moved" 34 --head "$A"
+C=$(printf 'c%.0s' {1..40}); pr 35 false open "$C"; runs "$C" failure x/runs/6
+fx 'run view' 'AssertionError: expected 3 to equal 4'; mwg_case 1 "real failure in: ci" 35
+fx 'run view' 'curl: (22) The requested URL returned error: 503'; fx 'run rerun' '{}'
+mwg_case 1 "still failing after 2 reruns: ci" 35
+D=$(printf 'd%.0s' {1..40}); pr 36 false open "$D"; runs "$D" failure https://ci.example/build/1
+mwg_case 1 "not a GitHub Actions run" 36
+mwg_case 1 "timed out after 0 minutes" 31 --timeout-min 0
+mwg_case 2 "couldn't read the PR" 99
+mwg_case 2 "has no value" 31 --method
+mwg_case 2 "unknown option" 31 --colour red
+# merge-queue.sh runs them in order and reports both lists.
+rc=0; got=$(stub bash skills/merging/merge-queue.sh o/r 32 33 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -q '^merged: #32$' <<<"$got" && grep -q '^not merged: #33$' <<<"$got"; } ||
+  { echo "merge-queue.sh: exit $rc, got $got"; fail=1; }
+rc=0; stub bash skills/merging/merge-queue.sh o/r >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "merge-queue.sh with no PRs: exit $rc"; fail=1; }
+
+# ai-policy-check.sh prints the lines that mention AI, and never reads silence as permission.
+fx 'repos/o/r/contents/CONTRIBUTING.md' $'# Contributing\nRun the tests.\nAI-generated code must be disclosed in the PR.'
+got=$(stub bash skills/growth/ai-policy-check.sh o/r 2>&1)
+[ "$got" = $'== CONTRIBUTING.md\n3:AI-generated code must be disclosed in the PR.' ] || { echo "ai-policy-check.sh: got '$got'"; fail=1; }
+fx 'repos/o/r/contents/CONTRIBUTING.md' 'Run the tests.'
+stub bash skills/growth/ai-policy-check.sh o/r 2>&1 | grep -q '^no policy found' || { echo "ai-policy-check.sh didn't say no policy found"; fail=1; }
+rc=0; stub bash skills/growth/ai-policy-check.sh o/none >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "ai-policy-check.sh on a missing repo: exit $rc"; fail=1; }
+
+# badge-status.sh: all Met means nothing blocks silver; one unanswered MUST blocks it.
+met=$(grep -v '^#' skills/openssf-badge/criteria.tsv | jq -R -s '[split("\n")[] | select(length > 0) | split("\t") | {key: "\(.[0])_status", value: "Met"}] | from_entries + {name: "notes", badge_level: "passing", tiered_percentage: 195}')
+fx 'curl_https://www.bestpractices.dev/projects/7.json' "$met"
+rc=0; got=$(stub bash skills/openssf-badge/badge-status.sh 7 2>&1) || rc=$?
+{ [ $rc = 0 ] && grep -q '^target   silver$' <<<"$got" && grep -q 'nothing blocks silver' <<<"$got"; } || { echo "badge-status.sh with every criterion Met: exit $rc, got $got"; fail=1; }
+must=$(awk -F'\t' '$2 == "silver" && $3 == "MUST" {print $1; exit}' skills/openssf-badge/criteria.tsv)
+should=$(awk -F'\t' '$2 == "silver" && $3 == "SHOULD" {print $1; exit}' skills/openssf-badge/criteria.tsv)
+fx 'curl_https://www.bestpractices.dev/projects/7.json' "$(jq --arg m "${must}_status" --arg s "${should}_status" 'del(.[$m]) | .[$s] = "Unmet"' <<<"$met")"
+rc=0; got=$(stub bash skills/openssf-badge/badge-status.sh 7 silver 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -q "^answer    silver   $must" <<<"$got" && grep -q "^should    silver   $should" <<<"$got"; } || { echo "badge-status.sh with $must unanswered: exit $rc, got $got"; fail=1; }
+for c in "7 platinum" "8"; do rc=0; read -ra a <<<"$c"; stub bash skills/openssf-badge/badge-status.sh "${a[@]}" >/dev/null 2>&1 || rc=$?
+  [ $rc = 2 ] || { echo "badge-status.sh $c: exit $rc, wanted 2"; fail=1; }; done
+
+# check-headers.sh passes hardened headers and names each one a weak site misses.
+fx 'curl_https://good.example' $'HTTP/2 301\r\nlocation: /\r\n\r\nHTTP/2 200\r\ncontent-security-policy: default-src \'self\'; script-src \'self\' \'wasm-unsafe-eval\'; frame-ancestors \'none\'\r\nstrict-transport-security: max-age=31536000\r\nx-content-type-options: nosniff\r\nreferrer-policy: strict-origin-when-cross-origin\r\n'
+fx 'curl_https://weak.example' $'HTTP/2 200\r\ncontent-security-policy: script-src * \'unsafe-inline\'\r\nstrict-transport-security: max-age=600\r\n'
+rc=0; got=$(stub bash skills/openssf-badge/check-headers.sh https://good.example 2>&1) || rc=$?
+{ [ $rc = 0 ] && [ "$got" = "ok       every URL sends hardened headers" ]; } || { echo "check-headers.sh on a hardened site: exit $rc, got $got"; fail=1; }
+rc=0; got=$(stub bash skills/openssf-badge/check-headers.sh https://weak.example 2>&1) || rc=$?
+{ [ $rc = 1 ] && [ "$(grep -c '^missing' <<<"$got")" = 4 ] && grep -q '^note' <<<"$got"; } || { echo "check-headers.sh on a weak site: exit $rc, got $got"; fail=1; }
+rc=0; stub bash skills/openssf-badge/check-headers.sh >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "check-headers.sh with no URL: exit $rc"; fail=1; }
+
+# org-audit.sh: a set-up org passes, --skip turns a gap into skipped, and an empty one is flagged.
+fx 'orgs/o' '{"name":"O","description":"d","blog":"https://o.example","email":"hi@o.example","is_verified":false,"two_factor_requirement_enabled":true,"web_commit_signoff_required":true,"default_repository_permission":"read"}'
+fx 'repos/o/.github' '{"private":false}'; fx 'graphql' '{"data":{"organization":{"pinnedItems":{"totalCount":3}}}}'
+for f in profile/README.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .github/ISSUE_TEMPLATE; do fx "repos/o/.github/contents/$f" '{}'; done
+rc=0; got=$(stub bash skills/org-setup/org-audit.sh o --skip "verified domain" 2>&1) || rc=$?
+{ [ $rc = 0 ] && grep -q '^skipped  verified domain$' <<<"$got" && grep -q '^ok       pinned repos (3)$' <<<"$got" && ! grep -q '^missing' <<<"$got"; } ||
+  { echo "org-audit.sh on a set-up org: exit $rc, got $got"; fail=1; }
+fx 'orgs/e' '{"name":null,"default_repository_permission":"write"}'; fx 'graphql' '{}'
+rc=0; got=$(stub bash skills/org-setup/org-audit.sh e 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -q '^unknown  2FA required for members (owner only)$' <<<"$got" && grep -q "^missing  members get read access by default (it's write)$" <<<"$got" &&
+  grep -q '^missing  public .github repo' <<<"$got" && grep -q '^unknown  pinned repos$' <<<"$got"; } || { echo "org-audit.sh on an empty org: exit $rc, got $got"; fail=1; }
+for c in "none" "o --colour"; do rc=0; read -ra a <<<"$c"; stub bash skills/org-setup/org-audit.sh "${a[@]}" >/dev/null 2>&1 || rc=$?
+  [ $rc = 2 ] || { echo "org-audit.sh $c: exit $rc, wanted 2"; fail=1; }; done
+
+# The bootstrap scripts push to local bare repos standing in for github.com.
+mkdir -p "$ud/remote/o"; git init -q --bare "$ud/remote/o/.github.git"; git init -q --bare "$ud/remote/o/new.git"
+gitstub() { GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0="url.$ud/remote/.insteadOf" GIT_CONFIG_VALUE_0=https://github.com/ \
+  GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=Test GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=test@example.com stub "$@"; }
+p=$(mktemp -d); mkdir "$p/profile"; echo '# O' > "$p/profile/README.md"; fx 'repo create' '{}'; fx 'pr create' 'https://github.com/o/.github/pull/1'
+rm -f "$ud/repos_o__github.json"
+got=$(gitstub bash skills/org-setup/bootstrap-dotgithub.sh o "$p" 2>&1)
+{ grep -q '^created o/.github$' <<<"$got" && grep -q '^pushed to' <<<"$got" && git -C "$ud/remote/o/.github.git" show main:profile/README.md | grep -q '^# O$'; } ||
+  { echo "bootstrap-dotgithub.sh didn't create and push: $got"; fail=1; }
+git -C "$ud/remote/o/.github.git" symbolic-ref HEAD refs/heads/main; fx 'repos/o/.github' '{"private":false}'; echo more > "$p/SECURITY.md"
+got=$(gitstub bash skills/org-setup/bootstrap-dotgithub.sh o "$p" 2>&1)
+grep -q 'pull/1' <<<"$got" || { echo "bootstrap-dotgithub.sh didn't open a PR when main took no push: $got"; fail=1; }
+rc=0; gitstub bash skills/org-setup/bootstrap-dotgithub.sh o "$ud/bin" >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "bootstrap-dotgithub.sh without a profile: exit $rc"; fail=1; }
+l=$(mktemp -d); git -C "$l" init -q -b main; GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=T GIT_CONFIG_KEY_1=user.email GIT_CONFIG_VALUE_1=t@e.x git -C "$l" commit -q --allow-empty -m first
+fx 'repos/o/new/branches' '[]'
+got=$(gitstub bash skills/repo-setup/bootstrap-repo.sh o/new "$l" --private --description "a notes app" 2>&1)
+{ grep -q '^created  o/new$' <<<"$got" && grep -q '^pushed   main' <<<"$got" && git -C "$ud/remote/o/new.git" rev-parse -q --verify main >/dev/null; } ||
+  { echo "bootstrap-repo.sh didn't create and push: $got"; fail=1; }
+fx 'repos/o/new' '{}'; fx 'repos/o/new/branches' '[{"name":"main"}]'
+got=$(gitstub bash skills/repo-setup/bootstrap-repo.sh o/new "$l" 2>&1)
+{ grep -q '^exists   o/new$' <<<"$got" && grep -q '^skipped' <<<"$got"; } || { echo "bootstrap-repo.sh pushed to a repo with commits: $got"; fail=1; }
+for c in "--colour" ""; do rc=0; e=$(mktemp -d); git -C "$e" init -q; read -ra a <<<"$c"
+  gitstub bash skills/repo-setup/bootstrap-repo.sh o/new "$([ -z "$c" ] && echo "$e" || echo "$l")" ${a[@]+"${a[@]}"} >/dev/null 2>&1 || rc=$?; rm -rf "$e"
+  [ $rc = 2 ] || { echo "bootstrap-repo.sh ${c:-on a folder with no commits}: exit $rc"; fail=1; }; done
+rm -rf "$p" "$l"
+
+# save-point.sh drafts a section from what gh reports.
+fx 'user' '{"login":"me"}'; fx 'pr list' '[{"number":3,"title":"feat: x","headRefName":"feat/x"}]'
+fx 'run list' '[{"status":"in_progress","name":"ci","headBranch":"feat/x","databaseId":8}]'
+fx 'issue list' '[{"number":4,"title":"Write docs"}]'; fx 'repos/o/r/pulls?state=open&per_page=100' '[]'
+fx 'repos/o/r/issues?state=open&per_page=100' '[]'
+got=$(stub bash skills/save-point/save-point.sh o/r 2>&1)
+for line in '### o/r' '- Open PR #3: feat: x (`feat/x`)' '- Still running: ci on `feat/x` (run 8)' '- Assigned to me: #4 Write docs'; do
+  grep -qxF -- "$line" <<<"$got" || { echo "save-point.sh didn't print: $line"; fail=1; }
+done
+rc=0; stub bash skills/save-point/save-point.sh >/dev/null 2>&1 || rc=$?; [ $rc = 2 ] || { echo "save-point.sh with no repo: exit $rc"; fail=1; }
+
+# verify-release.sh checks sums, attestations, version and smoke test, and stops at a bad sum.
+mkdir "$ud/release"; printf '#!/bin/sh\necho "jot 1.2.0"\n' > "$ud/release/jot"
+(cd "$ud/release" && { command -v sha256sum >/dev/null && sha256sum jot || shasum -a 256 jot; } > checksums.txt)
+fx 'release view' '{"assets":[{"name":"jot"},{"name":"checksums.txt"}]}'; fx 'release download' '{}'; fx 'attestation verify' '{}'
+rc=0; got=$(stub bash skills/releases/verify-release.sh o/r v1.2.0 --pattern jot --version-cmd "sh {dir}/jot" --smoke "sh {dir}/jot" 2>&1) || rc=$?
+{ [ $rc = 0 ] && [ "$(grep -c '^ok' <<<"$got")" = 4 ] && grep -q 'is ready to publish' <<<"$got"; } || { echo "verify-release.sh on a good release: exit $rc, got $got"; fail=1; }
+rc=0; got=$(stub bash skills/releases/verify-release.sh o/r v1.3.0 --version-cmd "sh {dir}/jot" 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -q 'not 1.3.0' <<<"$got"; } || { echo "verify-release.sh missed a wrong version: exit $rc, got $got"; fail=1; }
+echo tampered >> "$ud/release/jot"
+rc=0; got=$(stub bash skills/releases/verify-release.sh o/r v1.2.0 2>&1) || rc=$?
+{ [ $rc = 1 ] && grep -q "checksum doesn't match" <<<"$got"; } || { echo "verify-release.sh missed a bad checksum: exit $rc, got $got"; fail=1; }
+rm -f "$ud/release_view.json"; rc=0; stub bash skills/releases/verify-release.sh o/r v1.2.0 >/dev/null 2>&1 || rc=$?
+[ $rc = 1 ] || { echo "verify-release.sh with no checksum file: exit $rc"; fail=1; }
 rm -rf "$ud"
 exit $fail

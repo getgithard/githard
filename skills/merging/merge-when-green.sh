@@ -63,7 +63,7 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
   head=$(jq -r .head.sha <<<"$pull")
   [ -z "$want_head" ] || [ "$head" = "$want_head" ] || { say "head moved to ${head:0:7}, not merging"; exit 2; }
   runs=$(gh api "repos/$repo/commits/$head/check-runs?per_page=100" \
-    --jq '.check_runs[] | [.name, .status, (.conclusion // "-"), (try (.details_url | capture("runs/(?<id>[0-9]+)").id) catch "-")] | @tsv' 2>/dev/null) ||
+    --jq '.check_runs[] | [.name, .status, (.conclusion // "-"), ([.details_url // "" | capture("runs/(?<id>[0-9]+)").id] | first // "-")] | @tsv' 2>/dev/null) ||
     { sleep 30; continue; }
   pending=0; failed=""; failed_runs=""
   names=${required:-$(cut -f1 <<<"$runs" | sort -u)}
