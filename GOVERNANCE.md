@@ -14,7 +14,7 @@ GitHard has one maintainer today, James Conway (@jamesconwaydev), who makes the 
 
 How to become a maintainer: after several merged PRs and reviews, a maintainer suggests it in a discussion, and the lead maintainer decides.
 
-Claude Code does much of the day-to-day GitHub work under the lead maintainer's account, following [`CLAUDE.md`](CLAUDE.md)'s rules. It merges only on passing checks, and asks before anything that touches money, legal questions, account settings or people.
+Claude Code does much of the day-to-day GitHub work under the lead maintainer's account, following the same rules as everyone else in [CONTRIBUTING.md](CONTRIBUTING.md). It merges only on passing checks, and asks before anything that touches money, legal questions, account settings or people.
 
 ## If someone can't continue
 

@@ -20,4 +20,4 @@ Built so far:
 - [`openssf-badge`](openssf-badge/SKILL.md): the OpenSSF Best Practices badge from setup to gold. `badge-status.sh` reads a project's real answers, `levels.md` maps every criterion, and there are templates for silver's documents plus `add-spdx.sh`, `csp-headers.py` and `check-headers.sh` for gold.
 - [`agent-toolkit`](agent-toolkit/SKILL.md): picks the Claude Code plugins, MCP servers and language servers a project needs, only from the official marketplace or a vetted list, and records them in the repo's `.claude/settings.json` so everyone gets the same tools.
 
-The rest of the planned skills, their order and what "done" means for each are in [`docs/design.md`](../docs/design.md) and [`docs/plan.md`](../docs/plan.md).
+Why each skill exists, the order they were built in and what "done" meant for each are in [`docs/design.md`](../docs/design.md) and [`docs/plan.md`](../docs/plan.md).

@@ -41,7 +41,7 @@ The plugin skeleton, the manifests, this plan, `docs/design.md`, `knowledge/`, r
 
 ## Rules for building
 
-- Read `CLAUDE.md` first in every session.
+- Read `docs/design.md`, this plan and `knowledge/lessons.md` first in every session.
 - One skill per PR. Keep the skill text in the house voice, and short enough that its token cost (`claude plugin details`) stays reasonable.
 - A lesson lives in `knowledge/lessons.md`. A skill cites it rather than repeating it at length.
 - Keep the example project generic. Never name any real project GitHard's lessons came from.

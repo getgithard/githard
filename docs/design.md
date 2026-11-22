@@ -1,6 +1,6 @@
 # GitHard: design
 
-Status, 8 Nov 2026: M1 is built (`using-githard`, `writing`, `repo-setup`, and the eval harness). The rest is planned, and `docs/plan.md` gives the order it gets built in.
+Status, 22 Nov 2026: all 15 skills below are built and shipped in githard--v0.2.0. This file is the design record. For what ships today, read the [README](../README.md) and [`skills/README.md`](../skills/README.md); `docs/plan.md` gives the order everything was built in.
 
 ## What it is
 
@@ -43,9 +43,9 @@ Skills reference `knowledge/` instead of copying it, so a lesson is fixed in one
 
 GitHard is skills and nothing else. It ships no subagents and no bot: nothing runs on a schedule or in GitHub Actions on your behalf. Every change happens in your own Claude Code session, while you're there to see it. James decided this on 15 Nov 2026, and dropped `on-duty` and both agents.
 
-### Planned skills
+### Skills
 
-Names are working names. Each skill's description has to say when to use it, in the words a user would say.
+Each skill's description has to say when to use it, in the words a user would say.
 
 | Skill | What it covers |
 |---|---|
@@ -62,10 +62,12 @@ Names are working names. Each skill's description has to say when to use it, in 
 | `writing` | The house voice applied to READMEs, docs, release notes, replies and posts, and how to swap in a project's own style. |
 | `growth` | Org profile, directories, starter repos, Show and tell etiquette, no spam, giving back to dependencies within their AI policies, measuring what each channel brings. |
 | `save-point` | The handoff file, memory of decisions, background watchers, and how a new session resumes. |
+| `openssf-badge` | The OpenSSF Best Practices badge from passing to gold: reading a project's real answers, mapping every criterion, and templates for the documents silver and gold ask for. |
+| `agent-toolkit` | The Claude Code plugins, MCP servers and language servers a project needs, chosen only from the official marketplace or a vetted list, and recorded in the repo's `.claude/settings.json`. |
 
 ### Hooks
 
-None planned for the first release. Revisit once the skills exist. A candidate is a reminder to run the unanswered-PR check at session start.
+None ship. A candidate for later is a reminder to run the unanswered-PR check at session start.
 
 ## What GitHard won't do
 
@@ -78,4 +80,4 @@ None planned for the first release. Revisit once the skills exist. A candidate i
 
 - **Evals:** each skill ships with cases in `evals/` that run with `claude plugin eval` and pass against a no-plugin baseline.
 - **Proof:** the owner builds a few new products with GitHard from an empty org, and each one ends up with a perfect repo-setup audit, a passing OpenSSF Best Practices badge, and a release made with the releases skill.
-- **Launch:** before the new year, listed in its own marketplace (`/plugin install githard --marketplace getgithard/githard`), with a README that shows a real before and after.
+- **Launch:** listed in its own marketplace (`/plugin marketplace add getgithard/githard`, then `/plugin install githard@githard`), with a README that shows a real before and after. That happened on 19 Nov 2026.
