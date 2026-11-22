@@ -1,7 +1,7 @@
 {
   "name": "githard",
   "version": "0.2.0",
-  "description": "Makes AI build and manage your GitHub repos perfectly.",
+  "description": "Boot camp for your GitHub repos.",
   "author": {
     "name": "James Conway",
     "url": "https://github.com/jamesconwaydev"
