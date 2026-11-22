@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "githard",
-  "description": "Makes AI build and manage your GitHub repos perfectly.",
+  "description": "Boot camp for your GitHub repos.",
   "owner": {
     "name": "James Conway",
     "url": "https://github.com/jamesconwaydev"
